@@ -64,6 +64,11 @@
 		);
 	}
 
+	// 响应式变量：需要显式声明依赖才能触发重新计算
+	$: videoStatuses, pageStatuses;
+	$: anyChanges = videoStatuses.some((status) => status !== null) ||
+		pageStatuses.some((status) => status !== null);
+
 	function buildRequest(): UpdateFilteredVideoStatusRequest {
 		const request: UpdateFilteredVideoStatusRequest = {};
 
@@ -305,14 +310,14 @@
 			<Button
 				variant="outline"
 				onclick={resetAllStatuses}
-				disabled={!hasAnyChanges() || loading}
+				disabled={!anyChanges || loading}
 				class="flex-1 cursor-pointer"
 			>
 				重置所有状态
 			</Button>
 			<Button
 				onclick={handleSubmit}
-				disabled={loading || !hasAnyChanges()}
+				disabled={loading || !anyChanges}
 				class="flex-1 cursor-pointer"
 			>
 				{loading ? '提交中...' : '提交更改'}

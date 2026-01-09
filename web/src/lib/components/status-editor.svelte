@@ -72,6 +72,7 @@
 
 	function handleVideoStatusChange(taskIndex: number, newValue: number) {
 		videoStatuses[taskIndex] = newValue;
+		videoStatuses = [...videoStatuses];
 	}
 
 	function handlePageStatusChange(pageId: number, taskIndex: number, newValue: number) {
@@ -79,6 +80,7 @@
 			return;
 		}
 		pageStatuses[pageId][taskIndex] = newValue;
+		pageStatuses = { ...pageStatuses };
 	}
 
 	function resetAllStatuses() {
@@ -111,6 +113,15 @@
 	function hasAnyChanges(): boolean {
 		return hasVideoChanges() || hasPageChanges();
 	}
+
+	// 响应式变量：需要显式声明依赖才能触发重新计算
+	$: videoStatuses, originalVideoStatuses, pageStatuses, originalPageStatuses, pages;
+	$: anyChanges = !videoStatuses.every((status, index) => status === originalVideoStatuses[index]) ||
+		pages.some((page) => {
+			const currentStatuses = pageStatuses[page.id] || [];
+			const originalStatuses = originalPageStatuses[page.id] || [];
+			return !currentStatuses.every((status, index) => status === originalStatuses[index]);
+		});
 
 	function buildRequest(): UpdateVideoStatusRequest {
 		const request: UpdateVideoStatusRequest = {};
@@ -231,14 +242,14 @@
 			<Button
 				variant="outline"
 				onclick={resetAllStatuses}
-				disabled={!hasAnyChanges()}
+				disabled={!anyChanges}
 				class="flex-1 cursor-pointer"
 			>
 				重置所有状态
 			</Button>
 			<Button
 				onclick={handleSubmit}
-				disabled={loading || !hasAnyChanges()}
+				disabled={loading || !anyChanges}
 				class="flex-1 cursor-pointer"
 			>
 				{loading ? '提交中...' : '提交更改'}
