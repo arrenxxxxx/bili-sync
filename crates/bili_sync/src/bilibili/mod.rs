@@ -6,6 +6,7 @@ use anyhow::{Result, bail, ensure};
 use arc_swap::ArcSwapOption;
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
+pub use bangumi_list::BangumiList;
 pub use client::{BiliClient, Client};
 pub use collection::{Collection, CollectionItem, CollectionType};
 pub use credential::Credential;
@@ -14,7 +15,7 @@ pub use dynamic::Dynamic;
 pub use error::BiliError;
 pub use favorite_list::FavoriteList;
 use favorite_list::Upper;
-pub use me::Me;
+pub use me::{BangumiType, Me};
 use once_cell::sync::Lazy;
 use reqwest::RequestBuilder;
 pub use submission::Submission;
@@ -22,6 +23,7 @@ pub use video::{Dimension, PageInfo, Video};
 pub use watch_later::WatchLater;
 
 mod analyzer;
+mod bangumi_list;
 mod client;
 mod collection;
 mod credential;
@@ -189,6 +191,27 @@ pub enum VideoInfo {
         cover: String,
         #[serde(default)]
         pubtime: DateTime<Utc>,
+    },
+    // 从番剧接口获取的视频信息
+    Bangumi {
+        title: String,
+        season_id: String,
+        ep_id: String,
+        bvid: String,
+        #[allow(dead_code)]
+        cid: String,
+        #[allow(dead_code)]
+        aid: String,
+        cover: String,
+        intro: String,
+        #[serde(with = "ts_seconds")]
+        pubtime: DateTime<Utc>,
+        show_title: Option<String>,
+        season_number: Option<i32>,
+        episode_number: Option<i32>,
+        share_copy: Option<String>,
+        show_season_type: Option<i32>,
+        actors: Option<String>,
     },
 }
 

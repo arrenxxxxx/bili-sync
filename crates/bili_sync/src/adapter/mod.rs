@@ -1,3 +1,4 @@
+mod bangumi;
 mod collection;
 mod favorite;
 mod submission;
@@ -17,6 +18,7 @@ use sea_orm::entity::prelude::*;
 use sea_orm::sea_query::SimpleExpr;
 
 #[rustfmt::skip]
+use bili_sync_entity::bangumi::Model as Bangumi;
 use bili_sync_entity::collection::Model as Collection;
 use bili_sync_entity::favorite::Model as Favorite;
 use bili_sync_entity::rule::Rule;
@@ -31,6 +33,7 @@ pub enum VideoSourceEnum {
     Collection,
     Submission,
     WatchLater,
+    Bangumi,
 }
 
 #[enum_dispatch(VideoSourceEnum)]
@@ -130,6 +133,7 @@ pub enum _ActiveModel {
     Collection(bili_sync_entity::collection::ActiveModel),
     Submission(bili_sync_entity::submission::ActiveModel),
     WatchLater(bili_sync_entity::watch_later::ActiveModel),
+    Bangumi(bili_sync_entity::bangumi::ActiveModel),
 }
 
 impl _ActiveModel {
@@ -151,6 +155,9 @@ impl _ActiveModel {
                 } else {
                     model.save(connection).await?;
                 }
+            }
+            _ActiveModel::Bangumi(model) => {
+                model.save(connection).await?;
             }
         }
         Ok(())

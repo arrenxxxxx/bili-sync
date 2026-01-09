@@ -25,6 +25,8 @@
 				return FolderIcon;
 			case 'upper':
 				return UserIcon;
+			case 'bangumi':
+				return VideoIcon;
 			default:
 				return VideoIcon;
 		}
@@ -38,6 +40,8 @@
 				return '合集';
 			case 'upper':
 				return 'UP 主';
+			case 'bangumi':
+				return '番剧';
 			default:
 				return '';
 		}
@@ -47,6 +51,7 @@
 		switch (item.type) {
 			case 'favorite':
 			case 'collection':
+			case 'bangumi':
 				return item.title;
 			case 'upper':
 				return item.uname;
@@ -60,6 +65,8 @@
 			case 'favorite':
 			case 'collection':
 				return `UID：${item.mid}`;
+			case 'bangumi':
+				return `${item.is_finish ? '已完结' : '连载中'} · ${item.media_count} 话`;
 			default:
 				return '';
 		}
@@ -69,6 +76,8 @@
 		switch (item.type) {
 			case 'upper':
 				return item.sign || '';
+			case 'bangumi':
+				return item.evaluate || '';
 			default:
 				return '';
 		}
@@ -100,6 +109,7 @@
 		switch (item.type) {
 			case 'favorite':
 			case 'collection':
+			case 'bangumi':
 				return item.media_count;
 			default:
 				return null;
@@ -110,6 +120,8 @@
 		switch (item.type) {
 			case 'upper':
 				return item.face;
+			case 'bangumi':
+				return item.cover;
 			default:
 				return '';
 		}
@@ -154,7 +166,7 @@
 					? 'opacity-50'
 					: ''}"
 			>
-				{#if avatarUrl && item.type === 'upper'}
+				{#if avatarUrl && (item.type === 'upper' || item.type === 'bangumi')}
 					<img
 						src={avatarUrl}
 						alt={title}

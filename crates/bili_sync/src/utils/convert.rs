@@ -113,6 +113,38 @@ impl VideoInfo {
                 valid: Set(true),
                 ..default
             },
+            VideoInfo::Bangumi {
+                title,
+                bvid,
+                cover,
+                intro,
+                pubtime,
+                season_id,
+                ep_id,
+                episode_number,
+                show_season_type,
+                actors,
+                ..
+            } => bili_sync_entity::video::ActiveModel {
+                bvid: Set(bvid),
+                name: Set(title),
+                intro: Set(intro),
+                cover: Set(cover),
+                pubtime: Set(pubtime.naive_utc()),
+                ctime: Set(pubtime.naive_utc()),
+                category: Set(2), // 番剧内容类型肯定是视频
+                valid: Set(true),
+                upper_id: Set(0),
+                upper_name: Set("番剧".to_string()),
+                upper_face: Set(String::new()),
+                download_status: Set(0),
+                season_id: Set(Some(season_id)),
+                ep_id: Set(Some(ep_id)),
+                episode_number: Set(episode_number),
+                show_season_type: Set(show_season_type),
+                actors: Set(actors),
+                ..default
+            },
             VideoInfo::Detail { .. } => unreachable!(),
         }
     }
@@ -152,8 +184,9 @@ impl VideoInfo {
                 //  1. 都为 true，表示视频是充电专享但是已经充过电，有权观看
                 //  2. 都为 false，表示视频是非充电视频
                 // redirect_url 仅在视频为番剧、影视、纪录片等特殊视频时才会有值，如果为空说明是普通视频
-                // 仅在三种条件都满足时，才认为视频是可下载的
-                valid: Set(state == 0 && (is_upower_exclusive == is_upower_play) && redirect_url.is_none()),
+                // 对于番剧订阅的视频（bangumi_id 为 Some），允许 redirect_url 存在
+                // 仅在三种条件都满足时，或者视频属于番剧订阅时，才认为视频是可下载的
+                valid: Set(state == 0 && (is_upower_exclusive == is_upower_play) && (redirect_url.is_none() || base_model.bangumi_id.is_some())),
                 upper_id: Set(upper.mid),
                 upper_name: Set(upper.name),
                 upper_face: Set(upper.face),
@@ -170,7 +203,8 @@ impl VideoInfo {
             | VideoInfo::Favorite { fav_time: time, .. }
             | VideoInfo::WatchLater { fav_time: time, .. }
             | VideoInfo::Submission { ctime: time, .. }
-            | VideoInfo::Dynamic { pubtime: time, .. } => time,
+            | VideoInfo::Dynamic { pubtime: time, .. }
+            | VideoInfo::Bangumi { pubtime: time, .. } => time,
             VideoInfo::Detail { .. } => unreachable!(),
         }
     }

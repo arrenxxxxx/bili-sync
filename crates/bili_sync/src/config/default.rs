@@ -28,3 +28,11 @@ pub fn default_collection_path() -> String {
 pub fn default_submission_path() -> String {
     "投稿/{{name}}".to_owned()
 }
+
+pub fn default_bangumi_path() -> String {
+    "番剧".to_owned()
+}
+
+pub fn default_bangumi_name() -> String {
+    "{{title}} - S{{season_pad}}E{{pid_pad}}".to_owned()
+}

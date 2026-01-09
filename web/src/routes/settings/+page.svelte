@@ -289,6 +289,10 @@
 							<Input id="page-name" bind:value={formData.page_name} />
 						</div>
 						<div class="space-y-2">
+							<Label for="bangumi-name">番剧名称模板</Label>
+							<Input id="bangumi-name" bind:value={formData.bangumi_name} />
+						</div>
+						<div class="space-y-2">
 							<Label for="upper-path">UP主头像保存路径</Label>
 							<Input
 								id="upper-path"
@@ -334,6 +338,10 @@
 						<div class="space-y-2">
 							<Label for="submission-default-path">UP 主投稿快捷订阅路径模板</Label>
 							<Input id="submission-default-path" bind:value={formData.submission_default_path} />
+						</div>
+						<div class="space-y-2">
+							<Label for="bangumi-default-path">番剧快捷订阅路径模板</Label>
+							<Input id="bangumi-default-path" bind:value={formData.bangumi_default_path} />
 						</div>
 					</div>
 

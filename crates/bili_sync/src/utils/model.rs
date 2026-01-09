@@ -116,7 +116,7 @@ pub async fn update_pages_model(pages: Vec<page::ActiveModel>, connection: &Data
 
 /// 获取所有已经启用的视频源
 pub async fn get_enabled_video_sources(connection: &DatabaseConnection) -> Result<Vec<VideoSourceEnum>> {
-    let (favorite, watch_later, submission, collection) = tokio::try_join!(
+    let (favorite, watch_later, submission, collection, bangumi) = tokio::try_join!(
         favorite::Entity::find()
             .filter(favorite::Column::Enabled.eq(true))
             .all(connection),
@@ -129,12 +129,16 @@ pub async fn get_enabled_video_sources(connection: &DatabaseConnection) -> Resul
         collection::Entity::find()
             .filter(collection::Column::Enabled.eq(true))
             .all(connection),
+        bangumi::Entity::find()
+            .filter(bangumi::Column::Enabled.eq(true))
+            .all(connection),
     )?;
-    let mut sources = Vec::with_capacity(favorite.len() + watch_later.len() + submission.len() + collection.len());
+    let mut sources = Vec::with_capacity(favorite.len() + watch_later.len() + submission.len() + collection.len() + bangumi.len());
     sources.extend(favorite.into_iter().map(VideoSourceEnum::from));
     sources.extend(watch_later.into_iter().map(VideoSourceEnum::from));
     sources.extend(submission.into_iter().map(VideoSourceEnum::from));
     sources.extend(collection.into_iter().map(VideoSourceEnum::from));
+    sources.extend(bangumi.into_iter().map(VideoSourceEnum::from));
     // 此处将视频源随机打乱顺序，从概率上确保每个视频源都有机会优先执行，避免后面视频源的长期饥饿问题
     sources.shuffle(&mut rand::rng());
     Ok(sources)

@@ -17,6 +17,7 @@
 		InsertFavoriteRequest,
 		InsertCollectionRequest,
 		InsertSubmissionRequest,
+		InsertBangumiRequest,
 		ApiError
 	} from '$lib/types';
 
@@ -40,7 +41,9 @@
 				? 'favorites'
 				: item.type === 'collection'
 					? 'collections'
-					: 'submissions';
+					: item.type === 'bangumi'
+						? 'bangumi'
+						: 'submissions';
 		return (await api.getDefaultPath(apiType, itemTitle)).data;
 	}
 
@@ -54,6 +57,8 @@
 				return '合集';
 			case 'upper':
 				return 'UP 主';
+			case 'bangumi':
+				return '番剧';
 			default:
 				return '';
 		}
@@ -65,6 +70,7 @@
 		switch (item.type) {
 			case 'favorite':
 			case 'collection':
+			case 'bangumi':
 				return item.title;
 			case 'upper':
 				return item.uname;
@@ -104,6 +110,14 @@
 						path: customPath.trim()
 					};
 					response = await api.insertSubmission(request);
+					break;
+				}
+				case 'bangumi': {
+					const request: InsertBangumiRequest = {
+						season_id: item.season_id,
+						path: customPath.trim()
+					};
+					response = await api.insertBangumi(request);
 					break;
 				}
 			}

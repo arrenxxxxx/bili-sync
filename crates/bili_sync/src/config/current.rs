@@ -9,7 +9,7 @@ use validator::Validate;
 
 use crate::bilibili::{Credential, DanmakuOption, FilterOption};
 use crate::config::default::{
-    default_auth_token, default_bind_address, default_collection_path, default_favorite_path, default_submission_path,
+    default_auth_token, default_bind_address, default_bangumi_name, default_bangumi_path, default_collection_path, default_favorite_path, default_submission_path,
     default_time_format,
 };
 use crate::config::item::{ConcurrentLimit, NFOTimeType, SkipOption, Trigger};
@@ -31,6 +31,8 @@ pub struct Config {
     pub video_name: String,
     pub page_name: String,
     #[serde(default)]
+    pub bangumi_name: String,
+    #[serde(default)]
     pub notifiers: Option<Arc<Vec<Notifier>>>,
     #[serde(default = "default_favorite_path")]
     pub favorite_default_path: String,
@@ -38,6 +40,8 @@ pub struct Config {
     pub collection_default_path: String,
     #[serde(default = "default_submission_path")]
     pub submission_default_path: String,
+    #[serde(default = "default_bangumi_path")]
+    pub bangumi_default_path: String,
     pub interval: Trigger,
     pub upper_path: PathBuf,
     pub nfo_time_type: NFOTimeType,
@@ -121,10 +125,12 @@ impl Default for Config {
             skip_option: SkipOption::default(),
             video_name: "{{title}}".to_owned(),
             page_name: "{{bvid}}".to_owned(),
+            bangumi_name: default_bangumi_name(),
             notifiers: None,
             favorite_default_path: default_favorite_path(),
             collection_default_path: default_collection_path(),
             submission_default_path: default_submission_path(),
+            bangumi_default_path: default_bangumi_path(),
             interval: Trigger::default(),
             upper_path: CONFIG_DIR.join("upper_face"),
             nfo_time_type: NFOTimeType::FavTime,

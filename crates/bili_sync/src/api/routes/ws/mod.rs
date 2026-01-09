@@ -170,10 +170,10 @@ impl WebSocketHandler {
     /// 移除全局系统信息订阅者
     fn remove_sysinfo_subscriber(&self, uuid: Uuid) {
         self.sysinfo_subscribers.remove(&uuid);
-        if self.sysinfo_subscribers.is_empty()
-            && let Some(token) = self.sysinfo_cancel.write().take()
-        {
-            token.cancel();
+        if self.sysinfo_subscribers.is_empty() {
+            if let Some(token) = self.sysinfo_cancel.write().take() {
+                token.cancel();
+            }
         }
     }
 

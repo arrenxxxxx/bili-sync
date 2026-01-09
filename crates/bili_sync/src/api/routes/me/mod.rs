@@ -9,8 +9,8 @@ use bili_sync_entity::*;
 use itertools::{Either, Itertools};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect};
 
-use crate::api::request::{FollowedCollectionsRequest, FollowedUppersRequest};
-use crate::api::response::{CollectionsResponse, FavoritesResponse, Followed, UppersResponse};
+use crate::api::request::{FollowedBangumiRequest, FollowedCollectionsRequest, FollowedUppersRequest};
+use crate::api::response::{BangumiResponse, CollectionsResponse, FavoritesResponse, Followed, UppersResponse};
 use crate::api::wrapper::{ApiError, ApiResponse};
 use crate::bilibili::{BiliClient, Me};
 use crate::config::VersionedConfig;
@@ -20,6 +20,8 @@ pub(super) fn router() -> Router {
         .route("/me/favorites", get(get_created_favorites))
         .route("/me/collections", get(get_followed_collections))
         .route("/me/uppers", get(get_followed_uppers))
+        .route("/me/bangumi", get(get_followed_bangumi))
+        .route("/me/drama", get(get_followed_drama))
 }
 
 /// 获取当前用户创建的收藏夹
@@ -185,5 +187,93 @@ pub async fn get_followed_uppers(
     Ok(ApiResponse::ok(UppersResponse {
         uppers,
         total: bili_uppers.total,
+    }))
+}
+
+/// 获取当前用户追番列表 (season_type = 1)
+pub async fn get_followed_bangumi(
+    Extension(db): Extension<DatabaseConnection>,
+    Extension(bili_client): Extension<Arc<BiliClient>>,
+    Query(params): Query<FollowedBangumiRequest>,
+) -> Result<ApiResponse<BangumiResponse>, ApiError> {
+    let credential = &VersionedConfig::get().read().credential;
+    let me = Me::new(bili_client.as_ref(), credential);
+    let (page_num, page_size) = (params.page_num.unwrap_or(1), params.page_size.unwrap_or(20));
+    let bili_bangumi = me.get_followed_bangumi(page_num, page_size, crate::bilibili::BangumiType::Anime).await?;
+
+    let bili_season_ids: Vec<_> = bili_bangumi.list.iter().map(|b| b.season_id).collect();
+    let subscribed_season_ids: HashSet<i64> = bangumi::Entity::find()
+        .select_only()
+        .column(bangumi::Column::SeasonId)
+        .filter(bangumi::Column::SeasonId.is_in(bili_season_ids.clone()))
+        .into_tuple()
+        .all(&db)
+        .await?
+        .into_iter()
+        .collect();
+
+    let bangumi_list = bili_bangumi
+        .list
+        .into_iter()
+        .filter(|b| b.season_type == 1) // 只返回番剧 (season_type = 1)
+        .map(|b| Followed::Bangumi {
+            season_id: b.season_id,
+            title: b.title,
+            media_count: b.total_count,
+            evaluate: b.evaluate,
+            cover: b.cover,
+            is_finish: b.is_finish,
+            season_type: b.season_type,
+            subscribed: subscribed_season_ids.contains(&b.season_id),
+        })
+        .collect();
+
+    Ok(ApiResponse::ok(BangumiResponse {
+        bangumi: bangumi_list,
+        total: bili_bangumi.total,
+    }))
+}
+
+/// 获取当前用户追剧列表 (season_type ∈ {2, 3, 4, 5, 7})
+pub async fn get_followed_drama(
+    Extension(db): Extension<DatabaseConnection>,
+    Extension(bili_client): Extension<Arc<BiliClient>>,
+    Query(params): Query<FollowedBangumiRequest>,
+) -> Result<ApiResponse<BangumiResponse>, ApiError> {
+    let credential = &VersionedConfig::get().read().credential;
+    let me = Me::new(bili_client.as_ref(), credential);
+    let (page_num, page_size) = (params.page_num.unwrap_or(1), params.page_size.unwrap_or(20));
+    let bili_bangumi = me.get_followed_bangumi(page_num, page_size, crate::bilibili::BangumiType::Drama).await?;
+
+    let bili_season_ids: Vec<_> = bili_bangumi.list.iter().map(|b| b.season_id).collect();
+    let subscribed_season_ids: HashSet<i64> = bangumi::Entity::find()
+        .select_only()
+        .column(bangumi::Column::SeasonId)
+        .filter(bangumi::Column::SeasonId.is_in(bili_season_ids.clone()))
+        .into_tuple()
+        .all(&db)
+        .await?
+        .into_iter()
+        .collect();
+
+    let drama_list = bili_bangumi
+        .list
+        .into_iter()
+        .filter(|b| b.season_type != 1) // 排除番剧 (season_type = 1)
+        .map(|b| Followed::Bangumi {
+            season_id: b.season_id,
+            title: b.title,
+            media_count: b.total_count,
+            evaluate: b.evaluate,
+            cover: b.cover,
+            is_finish: b.is_finish,
+            season_type: b.season_type,
+            subscribed: subscribed_season_ids.contains(&b.season_id),
+        })
+        .collect();
+
+    Ok(ApiResponse::ok(BangumiResponse {
+        bangumi: drama_list,
+        total: bili_bangumi.total,
     }))
 }

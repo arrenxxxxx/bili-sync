@@ -6,6 +6,8 @@
 	import HeartIcon from '@lucide/svelte/icons/heart';
 	import FoldersIcon from '@lucide/svelte/icons/folders';
 	import UserIcon from '@lucide/svelte/icons/user';
+	import TvIcon from '@lucide/svelte/icons/tv';
+	import FilmIcon from '@lucide/svelte/icons/film';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 	import PaletteIcon from '@lucide/svelte/icons/palette';
@@ -72,6 +74,16 @@
 						title: '我关注的 UP 主',
 						icon: UserIcon,
 						href: '/me/uppers'
+					},
+					{
+						title: '我追的番',
+						icon: TvIcon,
+						href: '/me/bangumi'
+					},
+					{
+						title: '我追的剧',
+						icon: FilmIcon,
+						href: '/me/drama'
 					}
 				]
 			}

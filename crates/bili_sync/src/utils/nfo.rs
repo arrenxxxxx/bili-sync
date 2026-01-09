@@ -12,6 +12,7 @@ use crate::config::NFOTimeType;
 pub enum NFO<'a> {
     Movie(Movie<'a>),
     TVShow(TVShow<'a>),
+    Bangumi(Bangumi<'a>),
     Upper(Upper),
     Episode(Episode<'a>),
 }
@@ -48,6 +49,17 @@ pub struct Episode<'a> {
     pub pid: String,
 }
 
+pub struct Bangumi<'a> {
+    pub title: &'a str,
+    pub evaluate: &'a str,
+    pub season_id: i64,
+    pub media_id: i64,
+    pub cover: &'a str,
+    pub season_type: u16,
+    pub is_finish: bool,
+    pub total: u16,
+}
+
 impl NFO<'_> {
     pub async fn generate_nfo(self) -> Result<String> {
         let mut buffer = r#"<?xml version="1.0" encoding="utf-8" standalone="yes"?>
@@ -62,6 +74,9 @@ impl NFO<'_> {
             }
             NFO::TVShow(tvshow) => {
                 Self::write_tvshow_nfo(writer, tvshow).await?;
+            }
+            NFO::Bangumi(bangumi) => {
+                Self::write_bangumi_nfo(writer, bangumi).await?;
             }
             NFO::Upper(upper) => {
                 Self::write_upper_nfo(writer, upper).await?;
@@ -183,6 +198,83 @@ impl NFO<'_> {
                 writer
                     .create_element("premiered")
                     .write_text_content_async(BytesText::new(&tvshow.premiered.format("%Y-%m-%d").to_string()))
+                    .await?;
+                Ok(writer)
+            })
+            .await?;
+        Ok(())
+    }
+
+    async fn write_bangumi_nfo(
+        mut writer: Writer<&mut BufWriter<&mut Vec<u8>>>,
+        bangumi: Bangumi<'_>,
+    ) -> Result<()> {
+        // 根据 season_type 映射到 genre 标签
+        let genre = match bangumi.season_type {
+            1 => "番剧",
+            2 => "电影",
+            3 => "纪录片",
+            4 => "国创",
+            5 => "电视剧",
+            7 => "综艺",
+            _ => "其他",
+        };
+        let studio = match bangumi.season_type {
+            1 | 4 => "Bilibili",
+            _ => "Bilibili",
+        };
+        writer
+            .create_element("tvshow")
+            .write_inner_content_async::<_, _, Error>(|writer| async move {
+                writer
+                    .create_element("plot")
+                    .write_cdata_content_async(BytesCData::new(format!(
+                        "番剧 ID：{}<br/>媒体 ID：{}",
+                        bangumi.season_id, bangumi.media_id
+                    )))
+                    .await?;
+                writer.create_element("outline").write_empty_async().await?;
+                writer
+                    .create_element("title")
+                    .write_text_content_async(BytesText::new(bangumi.title))
+                    .await?;
+                writer
+                    .create_element("rating")
+                    .write_text_content_async(BytesText::new(bangumi.evaluate))
+                    .await?;
+                writer
+                    .create_element("season")
+                    .write_text_content_async(BytesText::new("1"))
+                    .await?;
+                writer
+                    .create_element("episode")
+                    .write_text_content_async(BytesText::new(&bangumi.total.to_string()))
+                    .await?;
+                writer
+                    .create_element("status")
+                    .write_text_content_async(BytesText::new(if bangumi.is_finish { "完结" } else { "连载中" }))
+                    .await?;
+                writer
+                    .create_element("studio")
+                    .write_text_content_async(BytesText::new(studio))
+                    .await?;
+                writer
+                    .create_element("genre")
+                    .write_text_content_async(BytesText::new(genre))
+                    .await?;
+                writer
+                    .create_element("uniqueid")
+                    .with_attribute(("type", "bilibili_season"))
+                    .write_text_content_async(BytesText::new(&bangumi.season_id.to_string()))
+                    .await?;
+                writer
+                    .create_element("uniqueid")
+                    .with_attribute(("type", "bilibili_media"))
+                    .write_text_content_async(BytesText::new(&bangumi.media_id.to_string()))
+                    .await?;
+                writer
+                    .create_element("thumb")
+                    .write_text_content_async(BytesText::new(bangumi.cover))
                     .await?;
                 Ok(writer)
             })
@@ -410,6 +502,21 @@ impl<'a> ToNFO<'a, Episode<'a>> for &'a page::Model {
         Episode {
             name: &self.name,
             pid: self.pid.to_string(),
+        }
+    }
+}
+
+impl<'a> ToNFO<'a, Bangumi<'a>> for &'a bili_sync_entity::bangumi::Model {
+    fn to_nfo(&'a self, _nfo_time_type: NFOTimeType) -> Bangumi<'a> {
+        Bangumi {
+            title: &self.title,
+            evaluate: &self.evaluate,
+            season_id: self.season_id,
+            media_id: self.media_id,
+            cover: &self.cover,
+            season_type: self.season_type,
+            is_finish: self.is_finish,
+            total: self.total,
         }
     }
 }

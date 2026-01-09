@@ -14,7 +14,7 @@ pub(super) fn router() -> Router {
 async fn get_dashboard(
     Extension(db): Extension<DatabaseConnection>,
 ) -> Result<ApiResponse<DashBoardResponse>, ApiError> {
-    let (enabled_favorites, enabled_collections, enabled_submissions, enabled_watch_later, videos_by_day) = tokio::try_join!(
+    let (enabled_favorites, enabled_collections, enabled_submissions, enabled_watch_later, enabled_bangumi, videos_by_day) = tokio::try_join!(
         favorite::Entity::find()
             .filter(favorite::Column::Enabled.eq(true))
             .count(&db),
@@ -26,6 +26,9 @@ async fn get_dashboard(
             .count(&db),
         watch_later::Entity::find()
             .filter(watch_later::Column::Enabled.eq(true))
+            .count(&db),
+        bangumi::Entity::find()
+            .filter(bangumi::Column::Enabled.eq(true))
             .count(&db),
         DayCountPair::find_by_statement(Statement::from_string(
             db.get_database_backend(),
@@ -60,6 +63,7 @@ ORDER BY
         enabled_collections,
         enabled_submissions,
         enable_watch_later: enabled_watch_later > 0,
+        enabled_bangumi,
         videos_by_day,
     }))
 }

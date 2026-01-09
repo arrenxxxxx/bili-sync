@@ -12,9 +12,11 @@ import type {
 	FavoritesResponse,
 	CollectionsResponse,
 	UppersResponse,
+	BangumiResponse,
 	InsertFavoriteRequest,
 	InsertCollectionRequest,
 	InsertSubmissionRequest,
+	InsertBangumiRequest,
 	VideoSourcesDetailsResponse,
 	UpdateVideoSourceRequest,
 	Config,
@@ -210,6 +212,28 @@ class ApiClient {
 		return this.get<UppersResponse>('/me/uppers', params as Record<string, unknown>);
 	}
 
+	async getFollowedBangumi(
+		pageNum?: number,
+		pageSize?: number
+	): Promise<ApiResponse<BangumiResponse>> {
+		const params = {
+			page_num: pageNum,
+			page_size: pageSize
+		};
+		return this.get<BangumiResponse>('/me/bangumi', params as Record<string, unknown>);
+	}
+
+	async getFollowedDrama(
+		pageNum?: number,
+		pageSize?: number
+	): Promise<ApiResponse<BangumiResponse>> {
+		const params = {
+			page_num: pageNum,
+			page_size: pageSize
+		};
+		return this.get<BangumiResponse>('/me/drama', params as Record<string, unknown>);
+	}
+
 	async insertFavorite(request: InsertFavoriteRequest): Promise<ApiResponse<boolean>> {
 		return this.post<boolean>('/video-sources/favorites', request);
 	}
@@ -220,6 +244,10 @@ class ApiClient {
 
 	async insertSubmission(request: InsertSubmissionRequest): Promise<ApiResponse<boolean>> {
 		return this.post<boolean>('/video-sources/submissions', request);
+	}
+
+	async insertBangumi(request: InsertBangumiRequest): Promise<ApiResponse<boolean>> {
+		return this.post<boolean>('/video-sources/bangumi', request);
 	}
 
 	async getVideoSourcesDetails(): Promise<ApiResponse<VideoSourcesDetailsResponse>> {
@@ -298,9 +326,14 @@ const api = {
 		apiClient.getFollowedCollections(pageNum, pageSize),
 	getFollowedUppers: (pageNum?: number, pageSize?: number, name?: string) =>
 		apiClient.getFollowedUppers(pageNum, pageSize, name),
+	getFollowedBangumi: (pageNum?: number, pageSize?: number) =>
+		apiClient.getFollowedBangumi(pageNum, pageSize),
+	getFollowedDrama: (pageNum?: number, pageSize?: number) =>
+		apiClient.getFollowedDrama(pageNum, pageSize),
 	insertFavorite: (request: InsertFavoriteRequest) => apiClient.insertFavorite(request),
 	insertCollection: (request: InsertCollectionRequest) => apiClient.insertCollection(request),
 	insertSubmission: (request: InsertSubmissionRequest) => apiClient.insertSubmission(request),
+	insertBangumi: (request: InsertBangumiRequest) => apiClient.insertBangumi(request),
 	getVideoSourcesDetails: () => apiClient.getVideoSourcesDetails(),
 	updateVideoSource: (type: string, id: number, request: UpdateVideoSourceRequest) =>
 		apiClient.updateVideoSource(type, id, request),

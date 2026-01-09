@@ -15,9 +15,11 @@ fn create_template(config: &Config) -> Result<handlebars::Handlebars<'static>> {
     handlebars.register_helper("truncate", Box::new(truncate));
     handlebars.path_safe_register("video", config.video_name.clone())?;
     handlebars.path_safe_register("page", config.page_name.clone())?;
+    handlebars.path_safe_register("bangumi", config.bangumi_name.clone())?;
     handlebars.path_safe_register("favorite_default_path", config.favorite_default_path.clone())?;
     handlebars.path_safe_register("collection_default_path", config.collection_default_path.clone())?;
     handlebars.path_safe_register("submission_default_path", config.submission_default_path.clone())?;
+    handlebars.path_safe_register("bangumi_default_path", config.bangumi_default_path.clone())?;
     if let Some(notifiers) = &config.notifiers {
         for notifier in notifiers.iter() {
             if let Notifier::Webhook { url, template, .. } = notifier {

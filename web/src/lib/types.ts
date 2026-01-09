@@ -8,6 +8,7 @@ export interface VideosRequest {
 	favorite?: number;
 	submission?: number;
 	watch_later?: number;
+	bangumi?: number;
 	query?: string;
 	page?: number;
 	page_size?: number;
@@ -23,6 +24,7 @@ export interface VideoSourcesResponse {
 	favorite: VideoSource[];
 	submission: VideoSource[];
 	watch_later: VideoSource[];
+	bangumi: VideoSource[];
 }
 
 export interface VideoInfo {
@@ -100,6 +102,7 @@ export interface UpdateFilteredVideoStatusRequest {
 	favorite?: number;
 	submission?: number;
 	watch_later?: number;
+	bangumi?: number;
 	query?: string;
 	video_updates?: StatusUpdate[];
 	page_updates?: StatusUpdate[];
@@ -114,6 +117,7 @@ export interface ResetFilteredVideoStatusRequest {
 	favorite?: number;
 	submission?: number;
 	watch_later?: number;
+	bangumi?: number;
 	query?: string;
 	force: boolean;
 }
@@ -145,6 +149,17 @@ export type Followed =
 			sign: string;
 			invalid: boolean;
 			subscribed: boolean;
+	  }
+	| {
+			type: 'bangumi';
+			season_id: number;
+			title: string;
+			media_count: number;
+			evaluate: string;
+			cover: string;
+			is_finish: boolean;
+			season_type: number;
+			subscribed: boolean;
 	  };
 
 export interface FavoritesResponse {
@@ -158,6 +173,11 @@ export interface CollectionsResponse {
 
 export interface UppersResponse {
 	uppers: Followed[];
+	total: number;
+}
+
+export interface BangumiResponse {
+	bangumi: Followed[];
 	total: number;
 }
 
@@ -175,6 +195,11 @@ export interface InsertCollectionRequest {
 
 export interface InsertSubmissionRequest {
 	upper_id: number;
+	path: string;
+}
+
+export interface InsertBangumiRequest {
+	season_id: number;
 	path: string;
 }
 
@@ -206,6 +231,7 @@ export interface VideoSourcesDetailsResponse {
 	favorites: VideoSourceDetail[];
 	submissions: VideoSourceDetail[];
 	watch_later: VideoSourceDetail[];
+	bangumi: VideoSourceDetail[];
 }
 
 export interface UpdateVideoSourceRequest {
@@ -301,10 +327,12 @@ export interface Config {
 	skip_option: SkipOption;
 	video_name: string;
 	page_name: string;
+	bangumi_name: string;
 	notifiers: Notifier[] | null;
 	favorite_default_path: string;
 	collection_default_path: string;
 	submission_default_path: string;
+	bangumi_default_path: string;
 	interval: Trigger;
 	upper_path: string;
 	nfo_time_type: string;
@@ -324,6 +352,7 @@ export interface DashBoardResponse {
 	enabled_collections: number;
 	enabled_submissions: number;
 	enable_watch_later: boolean;
+	enabled_bangumi: number;
 	videos_by_day: DayCountPair[];
 }
 

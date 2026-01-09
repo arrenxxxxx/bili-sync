@@ -11,6 +11,7 @@ pub struct VideoSourcesResponse {
     pub favorite: Vec<VideoSource>,
     pub submission: Vec<VideoSource>,
     pub watch_later: Vec<VideoSource>,
+    pub bangumi: Vec<VideoSource>,
 }
 
 #[derive(Serialize)]
@@ -140,6 +141,16 @@ pub enum Followed {
         invalid: bool,
         subscribed: bool,
     },
+    Bangumi {
+        season_id: i64,
+        title: String,
+        media_count: i32,
+        evaluate: String,
+        cover: String,
+        is_finish: bool,
+        season_type: u16,
+        subscribed: bool,
+    },
 }
 
 #[derive(Serialize)]
@@ -160,11 +171,18 @@ pub struct UppersResponse {
 }
 
 #[derive(Serialize)]
+pub struct BangumiResponse {
+    pub bangumi: Vec<Followed>,
+    pub total: i64,
+}
+
+#[derive(Serialize)]
 pub struct VideoSourcesDetailsResponse {
     pub collections: Vec<VideoSourceDetail>,
     pub favorites: Vec<VideoSourceDetail>,
     pub submissions: Vec<VideoSourceDetail>,
     pub watch_later: Vec<VideoSourceDetail>,
+    pub bangumi: Vec<VideoSourceDetail>,
 }
 
 #[derive(Serialize, FromQueryResult)]
@@ -179,6 +197,7 @@ pub struct DashBoardResponse {
     pub enabled_collections: u64,
     pub enabled_submissions: u64,
     pub enable_watch_later: bool,
+    pub enabled_bangumi: u64,
     pub videos_by_day: Vec<DayCountPair>,
 }
 

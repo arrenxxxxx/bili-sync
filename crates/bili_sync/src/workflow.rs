@@ -1,6 +1,7 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use anyhow::{Context, Result, anyhow, bail};
 use bili_sync_entity::*;
@@ -11,6 +12,7 @@ use sea_orm::TransactionTrait;
 use sea_orm::entity::prelude::*;
 use tokio::fs;
 use tokio::sync::Semaphore;
+use tokio_util::sync::CancellationToken;
 
 use crate::adapter::{VideoSource, VideoSourceEnum};
 use crate::bilibili::{BestStream, BiliClient, BiliError, Dimension, PageInfo, Video, VideoInfo};
@@ -18,7 +20,7 @@ use crate::config::{ARGS, Config, PathSafeTemplate};
 use crate::downloader::Downloader;
 use crate::error::ExecutionStatus;
 use crate::utils::download_context::DownloadContext;
-use crate::utils::format_arg::{page_format_args, video_format_args};
+use crate::utils::format_arg::{bangumi_page_format_args, page_format_args, video_format_args};
 use crate::utils::model::{
     create_pages, create_videos, filter_unfilled_videos, filter_unhandled_video_pages, update_pages_model,
     update_videos_model,
@@ -26,6 +28,76 @@ use crate::utils::model::{
 use crate::utils::nfo::{NFO, ToNFO};
 use crate::utils::rule::FieldEvaluatable;
 use crate::utils::status::{PageStatus, STATUS_OK, VideoStatus};
+
+// 全局番剧季度标题缓存
+fn season_title_cache() -> &'static Arc<Mutex<HashMap<String, String>>> {
+    static CACHE: OnceLock<Arc<Mutex<HashMap<String, String>>>> = OnceLock::new();
+    CACHE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+/// 获取番剧季标题，优先从缓存获取，缓存未命中时从API获取
+async fn get_cached_season_title(
+    bili_client: &BiliClient,
+    season_id: &str,
+    _token: CancellationToken,
+) -> Option<String> {
+    // 先检查缓存
+    if let Ok(cache) = season_title_cache().lock() {
+        if let Some(title) = cache.get(season_id) {
+            return Some(title.clone());
+        }
+    }
+
+    // 缓存未命中，从API获取
+    get_season_title_from_api(bili_client, season_id).await
+}
+
+async fn get_season_title_from_api(
+    bili_client: &BiliClient,
+    season_id: &str,
+) -> Option<String> {
+    let url = format!("https://api.bilibili.com/pgc/view/web/season?season_id={}", season_id);
+    tracing::debug!("获取番剧标题: {}", url);
+
+    let res = bili_client
+        .client
+        .request(
+            reqwest::Method::GET,
+            &url,
+            None, // 番剧API不需要credential
+        )
+        .send()
+        .await
+        .ok()?;
+
+    if !res.status().is_success() {
+        tracing::warn!("获取番剧标题失败，状态码: {}", res.status());
+        return None;
+    }
+
+    let json = res.json::<serde_json::Value>().await.ok()?;
+    if json["code"].as_i64()? != 0 {
+        tracing::warn!("获取番剧标题失败，API错误: {}", json["message"]);
+        return None;
+    }
+
+    let title = json["result"]["title"].as_str()?;
+    let normalized_title = title
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace(" （", "（")
+        .replace(" (", "(");
+
+    tracing::debug!("获取到番剧标题: {} (season_id={})", normalized_title, season_id);
+
+    // 缓存标题
+    if let Ok(mut cache) = season_title_cache().lock() {
+        cache.insert(season_id.to_string(), normalized_title.clone());
+    }
+
+    Some(normalized_title)
+}
 
 /// 完整地处理某个视频来源
 pub async fn process_video_source(
@@ -195,16 +267,24 @@ pub async fn download_unprocessed_videos(
     let mut stream = tasks
         // 触发风控时设置 download_aborted 标记并终止流
         .take_while(|res| {
-            if let Err(e) = res
-                && let Some(e) = e.downcast_ref::<BiliError>()
-                && e.is_risk_control_related()
-            {
-                risk_control_related_error = Some(e.clone());
+            if let Err(e) = res {
+                if let Some(e) = e.downcast_ref::<BiliError>() {
+                    if e.is_risk_control_related() {
+                        risk_control_related_error = Some(e.clone());
+                    }
+                }
+                // 记录错误日志
+                tracing::error!("下载视频失败: {}", e);
             }
             futures::future::ready(risk_control_related_error.is_none())
         })
         // 过滤掉没有触发风控的普通 Err，只保留正确返回的 Model
-        .filter_map(|res| futures::future::ready(res.ok()))
+        .filter_map(|res| {
+            if res.is_err() {
+                tracing::warn!("跳过下载失败的视频（非风控错误）");
+            }
+            futures::future::ready(res.ok())
+        })
         // 将成功返回的 Model 按十个一组合并
         .chunks(10);
     while let Some(models) = stream.next().await {
@@ -227,13 +307,37 @@ pub async fn download_video_pages(
     let _permit = semaphore.acquire().await.context("acquire semaphore failed")?;
     let mut status = VideoStatus::from(video_model.download_status);
     let separate_status = status.should_run();
+
+    // 判断是否为番剧
+    let is_bangumi = video_model.bangumi_id.is_some()
+        || (video_model.source_id.is_some() && video_model.source_type == Some(1));
+
     // 未记录路径时填充，已经填充过路径时使用现有的
     let base_path = if !video_model.path.is_empty() {
         PathBuf::from(&video_model.path)
     } else {
+        // 根据视频类型选择不同的模板
+        let (template_name, format_args) = if is_bangumi {
+            // 获取番剧标题（从缓存或API）
+            let api_title = if let Some(ref season_id) = video_model.season_id {
+                get_cached_season_title(cx.bili_client, season_id, CancellationToken::new()).await
+            } else {
+                None
+            };
+
+            (
+                "bangumi",
+                bangumi_page_format_args(&video_model, &page_models.first().unwrap(), &cx.config.time_format, api_title.as_deref()),
+            )
+        } else {
+            (
+                "video",
+                video_format_args(&video_model, &cx.config.time_format),
+            )
+        };
+
         cx.video_source.path().join(
-            cx.template
-                .path_safe_render("video", &video_format_args(&video_model, &cx.config.time_format))?,
+            cx.template.path_safe_render(template_name, &format_args)?,
         )
     };
     let upper_id = video_model.upper_id.to_string();
@@ -299,11 +403,12 @@ pub async fn download_video_pages(
             ExecutionStatus::Fixed(_) => unreachable!(),
         });
     for result in results {
-        if let ExecutionStatus::Failed(e) = result
-            && let Ok(e) = e.downcast::<BiliError>()
-            && e.is_risk_control_related()
-        {
-            bail!(e);
+        if let ExecutionStatus::Failed(e) = result {
+            if let Ok(e) = e.downcast::<BiliError>() {
+                if e.is_risk_control_related() {
+                    bail!(e);
+                }
+            }
         }
     }
     let mut video_active_model: video::ActiveModel = video_model.into();
@@ -344,10 +449,11 @@ pub async fn dispatch_download_page(
                     }
                 }
                 Err(e) => {
-                    if let Some(e) = e.downcast_ref::<BiliError>()
-                        && e.is_risk_control_related()
-                    {
-                        risk_control_related_error = Some(e.clone());
+                    tracing::error!("下载分页失败 (bvid: {}): {}", video_model.bvid, e);
+                    if let Some(e) = e.downcast_ref::<BiliError>() {
+                        if e.is_risk_control_related() {
+                            risk_control_related_error = Some(e.clone());
+                        }
                     }
                 }
             }
@@ -379,42 +485,62 @@ pub async fn download_page(
     let separate_status = status.should_run();
     let is_single_page = video_model.single_page.context("single_page is null")?;
     // 未记录路径时填充，已经填充过路径时使用现有的
-    let (base_path, base_name) = if let Some(old_video_path) = &page_model.path
-        && !old_video_path.is_empty()
-    {
-        let old_video_path = Path::new(old_video_path);
-        let old_video_filename = old_video_path
-            .file_name()
-            .context("invalid page path format")?
-            .to_string_lossy();
-        if is_single_page {
-            // 单页下的路径是 {base_path}/{base_name}.mp4
-            (
-                old_video_path.parent().context("invalid page path format")?,
-                old_video_filename.trim_end_matches(".mp4").to_string(),
-            )
-        } else {
-            // 多页下的路径是 {base_path}/Season 1/{base_name} - S01Exx.mp4
-            (
-                old_video_path
-                    .parent()
-                    .and_then(|p| p.parent())
-                    .context("invalid page path format")?,
-                old_video_filename
-                    .rsplit_once(" - ")
-                    .context("invalid page path format")?
-                    .0
-                    .to_string(),
-            )
+    let (base_path, base_name) = match &page_model.path {
+        Some(old_video_path) if !old_video_path.is_empty() => {
+            let old_video_path = Path::new(old_video_path);
+            let old_video_filename = old_video_path
+                .file_name()
+                .context("invalid page path format")?
+                .to_string_lossy();
+            if is_single_page {
+                // 单页下的路径是 {base_path}/{base_name}.mp4
+                (
+                    old_video_path.parent().context("invalid page path format")?,
+                    old_video_filename.trim_end_matches(".mp4").to_string(),
+                )
+            } else {
+                // 多页下的路径是 {base_path}/Season 1/{base_name} - S01Exx.mp4
+                (
+                    old_video_path
+                        .parent()
+                        .and_then(|p| p.parent())
+                        .context("invalid page path format")?,
+                    old_video_filename
+                        .rsplit_once(" - ")
+                        .context("invalid page path format")?
+                        .0
+                        .to_string(),
+                )
+            }
         }
-    } else {
-        (
-            base_path,
-            cx.template.path_safe_render(
-                "page",
-                &page_format_args(video_model, &page_model, &cx.config.time_format),
-            )?,
-        )
+        _ => {
+            // 判断是否为番剧
+            let is_bangumi = video_model.bangumi_id.is_some()
+                || (video_model.source_id.is_some() && video_model.source_type == Some(1));
+
+            let (template_name, format_args) = if is_bangumi {
+                // 获取番剧标题（从缓存或API）
+                let api_title = if let Some(ref season_id) = video_model.season_id {
+                    get_cached_season_title(cx.bili_client, season_id, CancellationToken::new()).await
+                } else {
+                    None
+                };
+
+                (
+                    "bangumi",
+                    bangumi_page_format_args(video_model, &page_model, &cx.config.time_format, api_title.as_deref()),
+                )
+            } else {
+                (
+                    "page",
+                    page_format_args(video_model, &page_model, &cx.config.time_format),
+                )
+            };
+            (
+                base_path,
+                cx.template.path_safe_render(template_name, &format_args)?,
+            )
+        },
     };
     let (poster_path, video_path, nfo_path, danmaku_path, fanart_path, subtitle_path) = if is_single_page {
         (
@@ -524,11 +650,12 @@ pub async fn download_page(
             ExecutionStatus::Fixed(_) => unreachable!(),
         });
     for result in results {
-        if let ExecutionStatus::Failed(e) = result
-            && let Ok(e) = e.downcast::<BiliError>()
-            && e.is_risk_control_related()
-        {
-            bail!(e);
+        if let ExecutionStatus::Failed(e) = result {
+            if let Ok(e) = e.downcast::<BiliError>() {
+                if e.is_risk_control_related() {
+                    bail!(e);
+                }
+            }
         }
     }
     let mut page_active_model: page::ActiveModel = page_model.into();
@@ -742,8 +869,37 @@ pub async fn generate_video_nfo(
     if !should_run {
         return Ok(ExecutionStatus::Skipped);
     }
-    generate_nfo(NFO::TVShow(video_model.to_nfo(cx.config.nfo_time_type)), nfo_path).await?;
+    // 如果视频属于番剧订阅，使用番剧元数据生成 NFO
+    match video_model.bangumi_id {
+        Some(bangumi_id) => {
+            use bili_sync_entity::bangumi;
+            use sea_orm::EntityTrait;
+            match bangumi::Entity::find_by_id(bangumi_id).one(cx.connection).await {
+                Ok(Some(bangumi_model)) => {
+                    // 使用 helper 函数避免生命周期问题
+                    generate_bangumi_nfo(&bangumi_model, nfo_path).await?;
+                }
+                _ => {
+                    // 如果找不到番剧实体，回退到使用视频元数据
+                    let nfo = NFO::TVShow(video_model.to_nfo(cx.config.nfo_time_type));
+                    generate_nfo(nfo, nfo_path).await?;
+                }
+            }
+        }
+        None => {
+            let nfo = NFO::TVShow(video_model.to_nfo(cx.config.nfo_time_type));
+            generate_nfo(nfo, nfo_path).await?;
+        }
+    }
     Ok(ExecutionStatus::Succeeded)
+}
+
+async fn generate_bangumi_nfo(
+    bangumi_model: &bili_sync_entity::bangumi::Model,
+    nfo_path: PathBuf,
+) -> Result<()> {
+    let nfo = NFO::Bangumi(bangumi_model.to_nfo(crate::config::NFOTimeType::PubTime));
+    generate_nfo(nfo, nfo_path).await
 }
 
 /// 创建 nfo_path 的父目录，然后写入 nfo 文件

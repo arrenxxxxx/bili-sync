@@ -13,6 +13,7 @@ pub struct Model {
     pub favorite_id: Option<i32>,
     pub watch_later_id: Option<i32>,
     pub submission_id: Option<i32>,
+    pub bangumi_id: Option<i32>,
     pub upper_id: i64,
     pub upper_name: String,
     pub upper_face: String,
@@ -31,6 +32,17 @@ pub struct Model {
     pub tags: Option<StringVec>,
     pub single_page: Option<bool>,
     pub created_at: String,
+    // 统一架构字段
+    pub source_id: Option<i32>,
+    pub source_type: Option<i32>,
+    // 番剧特有字段
+    pub season_id: Option<String>,
+    pub ep_id: Option<String>,
+    pub season_number: Option<i32>,
+    pub episode_number: Option<i32>,
+    pub share_copy: Option<String>,
+    pub show_season_type: Option<i32>,
+    pub actors: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

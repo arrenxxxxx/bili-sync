@@ -1,0 +1,141 @@
+use sea_orm_migration::prelude::*;
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[async_trait::async_trait]
+impl MigrationTrait for Migration {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // 扩展 video 表，添加番剧特有字段
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::SeasonId).string().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::EpId).string().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::SeasonNumber).integer().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::EpisodeNumber).integer().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::ShareCopy).string().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::ShowSeasonType).integer().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .add_column(ColumnDef::new(Video::Actors).string().null())
+                    .to_owned(),
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // 回滚：删除添加的字段
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::SeasonId)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::EpId)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::SeasonNumber)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::EpisodeNumber)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::ShareCopy)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::ShowSeasonType)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Video::Table)
+                    .drop_column(Video::Actors)
+                    .to_owned(),
+            )
+            .await?;
+        Ok(())
+    }
+}
+
+#[derive(DeriveIden)]
+enum Video {
+    Table,
+    SeasonId,
+    EpId,
+    SeasonNumber,
+    EpisodeNumber,
+    ShareCopy,
+    ShowSeasonType,
+    Actors,
+}

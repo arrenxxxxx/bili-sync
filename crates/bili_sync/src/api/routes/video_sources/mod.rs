@@ -14,14 +14,14 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QuerySelect, QueryTr
 use crate::adapter::{_ActiveModel, VideoSource as _, VideoSourceEnum};
 use crate::api::error::InnerApiError;
 use crate::api::request::{
-    DefaultPathRequest, InsertCollectionRequest, InsertFavoriteRequest, InsertSubmissionRequest,
+    DefaultPathRequest, InsertBangumiRequest, InsertCollectionRequest, InsertFavoriteRequest, InsertSubmissionRequest,
     UpdateVideoSourceRequest,
 };
 use crate::api::response::{
     UpdateVideoSourceResponse, VideoSource, VideoSourceDetail, VideoSourcesDetailsResponse, VideoSourcesResponse,
 };
 use crate::api::wrapper::{ApiError, ApiResponse, ValidatedJson};
-use crate::bilibili::{BiliClient, Collection, CollectionItem, FavoriteList, Submission};
+use crate::bilibili::{BiliClient, BangumiList, Collection, CollectionItem, FavoriteList, Submission};
 use crate::config::{PathSafeTemplate, TEMPLATE, VersionedConfig};
 use crate::utils::rule::FieldEvaluatable;
 
@@ -41,13 +41,14 @@ pub(super) fn router() -> Router {
         .route("/video-sources/favorites", post(insert_favorite))
         .route("/video-sources/collections", post(insert_collection))
         .route("/video-sources/submissions", post(insert_submission))
+        .route("/video-sources/bangumi", post(insert_bangumi))
 }
 
 /// 列出所有视频来源
 pub async fn get_video_sources(
     Extension(db): Extension<DatabaseConnection>,
 ) -> Result<ApiResponse<VideoSourcesResponse>, ApiError> {
-    let (collection, favorite, submission, mut watch_later) = tokio::try_join!(
+    let (collection, favorite, submission, mut watch_later, bangumi) = tokio::try_join!(
         collection::Entity::find()
             .select_only()
             .columns([collection::Column::Id, collection::Column::Name])
@@ -69,6 +70,12 @@ pub async fn get_video_sources(
             .column(watch_later::Column::Id)
             .column_as(Expr::value("稍后再看"), "name")
             .into_model::<VideoSource>()
+            .all(&db),
+        bangumi::Entity::find()
+            .select_only()
+            .columns([bangumi::Column::Id, bangumi::Column::Title])
+            .column_as(bangumi::Column::Title, "name")
+            .into_model::<VideoSource>()
             .all(&db)
     )?;
     // watch_later 是一个特殊的视频来源，如果不存在则添加一个默认项
@@ -83,6 +90,7 @@ pub async fn get_video_sources(
         favorite,
         submission,
         watch_later,
+        bangumi,
     }))
 }
 
@@ -90,7 +98,7 @@ pub async fn get_video_sources(
 pub async fn get_video_sources_details(
     Extension(db): Extension<DatabaseConnection>,
 ) -> Result<ApiResponse<VideoSourcesDetailsResponse>, ApiError> {
-    let (mut collections, mut favorites, mut submissions, mut watch_later) = tokio::try_join!(
+    let (mut collections, mut favorites, mut submissions, mut watch_later, mut bangumi) = tokio::try_join!(
         collection::Entity::find()
             .select_only()
             .columns([
@@ -135,6 +143,17 @@ pub async fn get_video_sources_details(
                 watch_later::Column::Rule
             ])
             .into_model::<VideoSourceDetail>()
+            .all(&db),
+        bangumi::Entity::find()
+            .select_only()
+            .column_as(bangumi::Column::Title, "name")
+            .columns([
+                bangumi::Column::Id,
+                bangumi::Column::Path,
+                bangumi::Column::Enabled,
+                bangumi::Column::Rule
+            ])
+            .into_model::<VideoSourceDetail>()
             .all(&db)
     )?;
     if watch_later.is_empty() {
@@ -148,7 +167,7 @@ pub async fn get_video_sources_details(
             enabled: false,
         })
     }
-    for sources in [&mut collections, &mut favorites, &mut submissions, &mut watch_later] {
+    for sources in [&mut collections, &mut favorites, &mut submissions, &mut watch_later, &mut bangumi] {
         sources.iter_mut().for_each(|item| {
             if let Some(rule) = &item.rule {
                 item.rule_display = Some(rule.to_string());
@@ -160,6 +179,7 @@ pub async fn get_video_sources_details(
         favorites,
         submissions,
         watch_later,
+        bangumi,
     }))
 }
 
@@ -171,6 +191,7 @@ pub async fn get_video_sources_default_path(
         "favorites" => "favorite_default_path",
         "collections" => "collection_default_path",
         "submissions" => "submission_default_path",
+        "bangumi" => "bangumi_default_path",
         _ => return Err(InnerApiError::BadRequest("Invalid video source type".to_string()).into()),
     };
     let template = TEMPLATE.read();
@@ -236,6 +257,13 @@ pub async fn update_video_source(
                 }
             }
         },
+        "bangumi" => bangumi::Entity::find_by_id(id).one(&db).await?.map(|model| {
+            let mut active_model: bangumi::ActiveModel = model.into();
+            active_model.path = Set(request.path);
+            active_model.enabled = Set(request.enabled);
+            active_model.rule = Set(request.rule);
+            _ActiveModel::Bangumi(active_model)
+        }),
         _ => return Err(InnerApiError::BadRequest("Invalid video source type".to_string()).into()),
     };
     let Some(active_model) = active_model else {
@@ -254,6 +282,7 @@ pub async fn remove_video_source(
         "collections" => collection::Entity::find_by_id(id).one(&db).await?.map(Into::into),
         "favorites" => favorite::Entity::find_by_id(id).one(&db).await?.map(Into::into),
         "submissions" => submission::Entity::find_by_id(id).one(&db).await?.map(Into::into),
+        "bangumi" => bangumi::Entity::find_by_id(id).one(&db).await?.map(Into::into),
         _ => return Err(InnerApiError::BadRequest("Invalid video source type".to_string()).into()),
     };
     let Some(video_source) = video_source else {
@@ -327,6 +356,16 @@ pub async fn evaluate_video_source(
                 .await?
                 .and_then(|r| r),
             video::Column::WatchLaterId.eq(id),
+        ),
+        "bangumi" => (
+            bangumi::Entity::find_by_id(id)
+                .select_only()
+                .column(bangumi::Column::Rule)
+                .into_tuple::<Option<Rule>>()
+                .one(&db)
+                .await?
+                .and_then(|r| r),
+            video::Column::BangumiId.eq(id),
         ),
         _ => return Err(InnerApiError::BadRequest("Invalid video source type".to_string()).into()),
     };
@@ -426,6 +465,34 @@ pub async fn insert_submission(
         upper_name: Set(upper.name),
         path: Set(request.path),
         enabled: Set(false),
+        ..Default::default()
+    })
+    .exec(&db)
+    .await?;
+    Ok(ApiResponse::ok(true))
+}
+
+/// 新增番剧订阅
+pub async fn insert_bangumi(
+    Extension(db): Extension<DatabaseConnection>,
+    Extension(bili_client): Extension<Arc<BiliClient>>,
+    ValidatedJson(request): ValidatedJson<InsertBangumiRequest>,
+) -> Result<ApiResponse<bool>, ApiError> {
+    let credential = &VersionedConfig::get().read().credential;
+    let bangumi = BangumiList::new(bili_client.as_ref(), request.season_id, credential);
+    let bangumi_info = bangumi.get_info().await?;
+
+    bangumi::Entity::insert(bangumi::ActiveModel {
+        season_id: Set(bangumi_info.season_id),
+        media_id: Set(bangumi_info.media_id),
+        title: Set(bangumi_info.title.clone()),
+        cover: Set(bangumi_info.cover),
+        evaluate: Set(bangumi_info.evaluate),
+        total: Set(bangumi_info.total),
+        is_finish: Set(bangumi_info.is_finish),
+        season_type: Set(bangumi_info.season_type),
+        path: Set(request.path),
+        enabled: Set(true),  // 订阅后自动启用
         ..Default::default()
     })
     .exec(&db)

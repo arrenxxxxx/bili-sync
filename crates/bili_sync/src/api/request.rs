@@ -10,6 +10,7 @@ pub struct VideosRequest {
     pub favorite: Option<i32>,
     pub submission: Option<i32>,
     pub watch_later: Option<i32>,
+    pub bangumi: Option<i32>,
     pub query: Option<String>,
     pub page: Option<u64>,
     pub page_size: Option<u64>,
@@ -27,6 +28,7 @@ pub struct ResetFilteredVideoStatusRequest {
     pub favorite: Option<i32>,
     pub submission: Option<i32>,
     pub watch_later: Option<i32>,
+    pub bangumi: Option<i32>,
     pub query: Option<String>,
     #[serde(default)]
     pub force: bool,
@@ -63,6 +65,7 @@ pub struct UpdateFilteredVideoStatusRequest {
     pub favorite: Option<i32>,
     pub submission: Option<i32>,
     pub watch_later: Option<i32>,
+    pub bangumi: Option<i32>,
     pub query: Option<String>,
     #[serde(default)]
     #[validate(nested)]
@@ -85,6 +88,12 @@ pub struct FollowedUppersRequest {
     pub name: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct FollowedBangumiRequest {
+    pub page_num: Option<i32>,
+    pub page_size: Option<i32>,
+}
+
 #[derive(Deserialize, Validate)]
 pub struct InsertFavoriteRequest {
     pub fid: i64,
@@ -105,6 +114,13 @@ pub struct InsertCollectionRequest {
 #[derive(Deserialize, Validate)]
 pub struct InsertSubmissionRequest {
     pub upper_id: i64,
+    #[validate(custom(function = "crate::utils::validation::validate_path"))]
+    pub path: String,
+}
+
+#[derive(Deserialize, Validate)]
+pub struct InsertBangumiRequest {
+    pub season_id: i64,
     #[validate(custom(function = "crate::utils::validation::validate_path"))]
     pub path: String,
 }
