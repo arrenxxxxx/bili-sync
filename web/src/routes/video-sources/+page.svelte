@@ -15,6 +15,8 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import TrashIcon2 from '@lucide/svelte/icons/trash-2';
+	import TvIcon from '@lucide/svelte/icons/tv';
+	import FilmIcon from '@lucide/svelte/icons/film';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { toast } from 'svelte-sonner';
 	import { setBreadcrumb } from '$lib/stores/breadcrumb';
@@ -30,7 +32,7 @@
 
 	// 添加对话框状态
 	let showAddDialog = false;
-	let addDialogType: 'favorites' | 'collections' | 'submissions' = 'favorites';
+	let addDialogType: 'favorites' | 'collections' | 'submissions' | 'bangumi' | 'drama' = 'favorites';
 	let adding = false;
 
 	// 编辑对话框状态
@@ -70,6 +72,8 @@
 		favorites: { label: '收藏夹', icon: HeartIcon },
 		collections: { label: '合集 / 列表', icon: FolderIcon },
 		submissions: { label: '用户投稿', icon: UserIcon },
+		bangumi: { label: '番剧', icon: TvIcon },
+		drama: { label: '追剧', icon: FilmIcon },
 		watch_later: { label: '稍后再看', icon: ClockIcon }
 	} as const;
 
@@ -210,7 +214,7 @@
 	}
 
 	// 打开添加对话框
-	function openAddDialog(type: 'favorites' | 'collections' | 'submissions') {
+	function openAddDialog(type: 'favorites' | 'collections' | 'submissions' | 'bangumi' | 'drama') {
 		addDialogType = type;
 		// 重置表单
 		favoriteForm = { fid: '', path: '' };
@@ -288,7 +292,7 @@
 		</div>
 	{:else if videoSourcesData}
 		<Tabs.Root bind:value={activeTab} class="w-full">
-			<Tabs.List class="grid w-full grid-cols-4">
+			<Tabs.List class="grid w-full grid-cols-6">
 				{#each Object.entries(TAB_CONFIG) as [key, config] (key)}
 					<Tabs.Trigger value={key} class="relative">
 						{config.label}
@@ -300,7 +304,7 @@
 				<Tabs.Content value={key} class="mt-6">
 					<div class="mb-4 flex items-center justify-between">
 						<div></div>
-						{#if key === 'favorites' || key === 'collections' || key === 'submissions'}
+						{#if key === 'favorites' || key === 'collections' || key === 'submissions' || key === 'bangumi' || key === 'drama'}
 							<Button size="sm" onclick={() => openAddDialog(key)} class="flex items-center gap-2">
 								<PlusIcon class="h-4 w-4" />
 								手动添加
@@ -412,11 +416,15 @@
 									还没有添加任何合集或列表订阅
 								{:else if key === 'submissions'}
 									还没有添加任何用户投稿订阅
+								{:else if key === 'bangumi'}
+									还没有添加任何番剧订阅
+								{:else if key === 'drama'}
+									还没有添加任何追剧订阅
 								{:else}
 									还没有添加稍后再看订阅
 								{/if}
 							</p>
-							{#if key === 'favorites' || key === 'collections' || key === 'submissions'}
+							{#if key === 'favorites' || key === 'collections' || key === 'submissions' || key === 'bangumi' || key === 'drama'}
 								<Button onclick={() => openAddDialog(key)} class="flex items-center gap-2">
 									<PlusIcon class="h-4 w-4" />
 									手动添加
@@ -557,6 +565,10 @@
 					添加收藏夹
 				{:else if addDialogType === 'collections'}
 					添加合集
+				{:else if addDialogType === 'bangumi'}
+					添加番剧
+				{:else if addDialogType === 'drama'}
+					添加追剧
 				{:else}
 					添加用户投稿
 				{/if}
@@ -618,6 +630,10 @@
 						</div>
 						<p class="text-muted-foreground text-xs">可从合集/列表页面URL中获取相应ID</p>
 					</div>
+				{:else if addDialogType === 'bangumi' || addDialogType === 'drama'}
+					<p class="text-muted-foreground text-sm">
+						请从侧边栏"番剧"或"追剧"页面浏览并订阅{addDialogType === 'bangumi' ? '番剧' : '剧集'}。
+					</p>
 				{:else}
 					<div class="space-y-4">
 						<div>
@@ -632,34 +648,36 @@
 						</div>
 					</div>
 				{/if}
-				<div class="mt-4">
-					<Label for="path" class="text-sm font-medium">下载路径</Label>
-					{#if addDialogType === 'favorites'}
-						<Input
-							id="path"
-							type="text"
-							bind:value={favoriteForm.path}
-							placeholder="请输入下载路径，例如：/path/to/download"
-							class="mt-1"
-						/>
-					{:else if addDialogType === 'collections'}
-						<Input
-							id="path"
-							type="text"
-							bind:value={collectionForm.path}
-							placeholder="请输入下载路径，例如：/path/to/download"
-							class="mt-1"
-						/>
-					{:else}
-						<Input
-							id="path"
-							type="text"
-							bind:value={submissionForm.path}
-							placeholder="请输入下载路径，例如：/path/to/download"
-							class="mt-1"
-						/>
-					{/if}
-				</div>
+				{#if addDialogType !== 'bangumi' && addDialogType !== 'drama'}
+					<div class="mt-4">
+						<Label for="path" class="text-sm font-medium">下载路径</Label>
+						{#if addDialogType === 'favorites'}
+							<Input
+								id="path"
+								type="text"
+								bind:value={favoriteForm.path}
+								placeholder="请输入下载路径，例如：/path/to/download"
+								class="mt-1"
+							/>
+						{:else if addDialogType === 'collections'}
+							<Input
+								id="path"
+								type="text"
+								bind:value={collectionForm.path}
+								placeholder="请输入下载路径，例如：/path/to/download"
+								class="mt-1"
+							/>
+						{:else}
+							<Input
+								id="path"
+								type="text"
+								bind:value={submissionForm.path}
+								placeholder="请输入下载路径，例如：/path/to/download"
+								class="mt-1"
+							/>
+						{/if}
+					</div>
+				{/if}
 			</div>
 			<div class="mt-6 flex justify-end gap-2">
 				<Button
@@ -670,9 +688,11 @@
 				>
 					取消
 				</Button>
-				<Button onclick={handleAdd} disabled={adding} class="px-4">
-					{adding ? '添加中...' : '添加'}
-				</Button>
+				{#if addDialogType !== 'bangumi' && addDialogType !== 'drama'}
+					<Button onclick={handleAdd} disabled={adding} class="px-4">
+						{adding ? '添加中...' : '添加'}
+					</Button>
+				{/if}
 			</div>
 		</Dialog.Content>
 	</Dialog.Root>

@@ -183,6 +183,7 @@ pub struct VideoSourcesDetailsResponse {
     pub submissions: Vec<VideoSourceDetail>,
     pub watch_later: Vec<VideoSourceDetail>,
     pub bangumi: Vec<VideoSourceDetail>,
+    pub drama: Vec<VideoSourceDetail>,
 }
 
 #[derive(Serialize, FromQueryResult)]
@@ -224,6 +225,8 @@ pub struct VideoSourceDetail {
     #[serde(default)]
     pub use_dynamic_api: Option<bool>,
     pub enabled: bool,
+    #[serde(default)]
+    pub season_type: Option<u16>,
 }
 
 #[derive(Serialize)]

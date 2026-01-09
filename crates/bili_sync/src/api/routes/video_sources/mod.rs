@@ -98,7 +98,7 @@ pub async fn get_video_sources(
 pub async fn get_video_sources_details(
     Extension(db): Extension<DatabaseConnection>,
 ) -> Result<ApiResponse<VideoSourcesDetailsResponse>, ApiError> {
-    let (mut collections, mut favorites, mut submissions, mut watch_later, mut bangumi) = tokio::try_join!(
+    let (mut collections, mut favorites, mut submissions, mut watch_later, all_bangumi) = tokio::try_join!(
         collection::Entity::find()
             .select_only()
             .columns([
@@ -151,7 +151,8 @@ pub async fn get_video_sources_details(
                 bangumi::Column::Id,
                 bangumi::Column::Path,
                 bangumi::Column::Enabled,
-                bangumi::Column::Rule
+                bangumi::Column::Rule,
+                bangumi::Column::SeasonType
             ])
             .into_model::<VideoSourceDetail>()
             .all(&db)
@@ -165,9 +166,24 @@ pub async fn get_video_sources_details(
             rule_display: None,
             use_dynamic_api: None,
             enabled: false,
+            season_type: None,
         })
     }
-    for sources in [&mut collections, &mut favorites, &mut submissions, &mut watch_later, &mut bangumi] {
+    // 根据 season_type 分离番剧和追剧
+    let mut bangumi = Vec::new();
+    let mut drama = Vec::new();
+    for item in all_bangumi {
+        let season_type = item.season_type.unwrap_or(0);
+        if season_type == 1 {
+            // season_type = 1 表示番剧
+            bangumi.push(item);
+        } else {
+            // season_type != 1 表示追剧
+            drama.push(item);
+        }
+    }
+
+    for sources in [&mut collections, &mut favorites, &mut submissions, &mut watch_later, &mut bangumi, &mut drama] {
         sources.iter_mut().for_each(|item| {
             if let Some(rule) = &item.rule {
                 item.rule_display = Some(rule.to_string());
@@ -180,6 +196,7 @@ pub async fn get_video_sources_details(
         submissions,
         watch_later,
         bangumi,
+        drama,
     }))
 }
 

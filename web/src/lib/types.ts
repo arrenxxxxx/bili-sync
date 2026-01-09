@@ -224,6 +224,7 @@ export interface VideoSourceDetail {
 	ruleDisplay: string | null;
 	useDynamicApi: boolean | null;
 	enabled: boolean;
+	seasonType?: number | null;
 }
 
 export interface VideoSourcesDetailsResponse {
@@ -232,6 +233,7 @@ export interface VideoSourcesDetailsResponse {
 	submissions: VideoSourceDetail[];
 	watch_later: VideoSourceDetail[];
 	bangumi: VideoSourceDetail[];
+	drama: VideoSourceDetail[];
 }
 
 export interface UpdateVideoSourceRequest {
