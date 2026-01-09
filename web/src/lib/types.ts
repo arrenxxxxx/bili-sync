@@ -9,6 +9,7 @@ export interface VideosRequest {
 	submission?: number;
 	watch_later?: number;
 	bangumi?: number;
+	drama?: number;
 	query?: string;
 	page?: number;
 	page_size?: number;
@@ -25,6 +26,7 @@ export interface VideoSourcesResponse {
 	submission: VideoSource[];
 	watch_later: VideoSource[];
 	bangumi: VideoSource[];
+	drama: VideoSource[];
 }
 
 export interface VideoInfo {

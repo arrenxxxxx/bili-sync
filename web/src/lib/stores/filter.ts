@@ -40,6 +40,8 @@ export const ToFilterParams = (
 	favorite?: number;
 	submission?: number;
 	watch_later?: number;
+	bangumi?: number;
+	drama?: number;
 } => {
 	const params: {
 		query?: string;
@@ -47,6 +49,8 @@ export const ToFilterParams = (
 		favorite?: number;
 		submission?: number;
 		watch_later?: number;
+		bangumi?: number;
+		drama?: number;
 	} = {};
 
 	if (state.query.trim()) {
@@ -55,7 +59,7 @@ export const ToFilterParams = (
 
 	if (state.videoSource && state.videoSource.type && state.videoSource.id) {
 		const { type, id } = state.videoSource;
-		params[type as 'collection' | 'favorite' | 'submission' | 'watch_later'] = parseInt(id);
+		params[type as 'collection' | 'favorite' | 'submission' | 'watch_later' | 'bangumi' | 'drama'] = parseInt(id);
 	}
 
 	return params;

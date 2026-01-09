@@ -12,6 +12,7 @@ pub struct VideoSourcesResponse {
     pub submission: Vec<VideoSource>,
     pub watch_later: Vec<VideoSource>,
     pub bangumi: Vec<VideoSource>,
+    pub drama: Vec<VideoSource>,
 }
 
 #[derive(Serialize)]
@@ -58,6 +59,13 @@ pub struct UpdateFilteredVideoStatusResponse {
 pub struct VideoSource {
     pub id: i32,
     pub name: String,
+}
+
+#[derive(FromQueryResult)]
+pub struct VideoSourceWithSeasonType {
+    pub id: i32,
+    pub name: String,
+    pub season_type: Option<u16>,
 }
 
 #[derive(Serialize, DerivePartialModel, FromQueryResult)]

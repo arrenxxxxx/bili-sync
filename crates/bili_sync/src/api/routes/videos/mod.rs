@@ -43,6 +43,8 @@ pub async fn get_videos(
         (params.favorite, video::Column::FavoriteId),
         (params.submission, video::Column::SubmissionId),
         (params.watch_later, video::Column::WatchLaterId),
+        (params.bangumi, video::Column::BangumiId),
+        (params.drama, video::Column::BangumiId),
     ] {
         if let Some(id) = field {
             query = query.filter(column.eq(id));
@@ -162,6 +164,8 @@ pub async fn reset_filtered_video_status(
         (request.favorite, video::Column::FavoriteId),
         (request.submission, video::Column::SubmissionId),
         (request.watch_later, video::Column::WatchLaterId),
+        (request.bangumi, video::Column::BangumiId),
+        (request.drama, video::Column::BangumiId),
     ] {
         if let Some(id) = field {
             query = query.filter(column.eq(id));
@@ -295,6 +299,8 @@ pub async fn update_filtered_video_status(
         (request.favorite, video::Column::FavoriteId),
         (request.submission, video::Column::SubmissionId),
         (request.watch_later, video::Column::WatchLaterId),
+        (request.bangumi, video::Column::BangumiId),
+        (request.drama, video::Column::BangumiId),
     ] {
         if let Some(id) = field {
             query = query.filter(column.eq(id));

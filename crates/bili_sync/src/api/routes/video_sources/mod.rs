@@ -18,7 +18,7 @@ use crate::api::request::{
     UpdateVideoSourceRequest,
 };
 use crate::api::response::{
-    UpdateVideoSourceResponse, VideoSource, VideoSourceDetail, VideoSourcesDetailsResponse, VideoSourcesResponse,
+    UpdateVideoSourceResponse, VideoSource, VideoSourceDetail, VideoSourceWithSeasonType, VideoSourcesDetailsResponse, VideoSourcesResponse,
 };
 use crate::api::wrapper::{ApiError, ApiResponse, ValidatedJson};
 use crate::bilibili::{BiliClient, BangumiList, Collection, CollectionItem, FavoriteList, Submission};
@@ -48,7 +48,7 @@ pub(super) fn router() -> Router {
 pub async fn get_video_sources(
     Extension(db): Extension<DatabaseConnection>,
 ) -> Result<ApiResponse<VideoSourcesResponse>, ApiError> {
-    let (collection, favorite, submission, mut watch_later, bangumi) = tokio::try_join!(
+    let (collection, favorite, submission, mut watch_later, all_bangumi) = tokio::try_join!(
         collection::Entity::find()
             .select_only()
             .columns([collection::Column::Id, collection::Column::Name])
@@ -71,11 +71,12 @@ pub async fn get_video_sources(
             .column_as(Expr::value("稍后再看"), "name")
             .into_model::<VideoSource>()
             .all(&db),
+        // 获取所有 bangumi 数据，包含 season_type 用于区分番剧和追剧
         bangumi::Entity::find()
             .select_only()
-            .columns([bangumi::Column::Id, bangumi::Column::Title])
+            .columns([bangumi::Column::Id, bangumi::Column::Title, bangumi::Column::SeasonType])
             .column_as(bangumi::Column::Title, "name")
-            .into_model::<VideoSource>()
+            .into_model::<VideoSourceWithSeasonType>()
             .all(&db)
     )?;
     // watch_later 是一个特殊的视频来源，如果不存在则添加一个默认项
@@ -85,12 +86,34 @@ pub async fn get_video_sources(
             name: "稍后再看".to_string(),
         });
     }
+
+    // 根据 season_type 分离番剧和追剧
+    let mut bangumi = Vec::new();
+    let mut drama = Vec::new();
+    for item in all_bangumi {
+        let season_type = item.season_type.unwrap_or(0);
+        if season_type == 1 {
+            // season_type = 1 表示番剧
+            bangumi.push(VideoSource {
+                id: item.id,
+                name: item.name,
+            });
+        } else {
+            // season_type != 1 表示追剧
+            drama.push(VideoSource {
+                id: item.id,
+                name: item.name,
+            });
+        }
+    }
+
     Ok(ApiResponse::ok(VideoSourcesResponse {
         collection,
         favorite,
         submission,
         watch_later,
         bangumi,
+        drama,
     }))
 }
 
