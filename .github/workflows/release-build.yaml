@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-binary:
-    uses: amtoaer/bili-sync/.github/workflows/build-binary.yaml@main
+    uses: ./.github/workflows/build-binary.yaml
   github-release:
     name: Create GitHub Release
     needs: build-binary
@@ -44,7 +44,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync-rs
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync
           tags: |
             type=raw,value=latest
             type=raw,value=${{ github.ref_name }}
@@ -75,4 +75,4 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync-rs
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync
