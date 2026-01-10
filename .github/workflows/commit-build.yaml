@@ -7,5 +7,6 @@ on:
 
 jobs:
   build-binary:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-    uses: amtoaer/bili-sync/.github/workflows/build-binary.yaml@main
+    if: false  # disabled: main 分支构建已由 pr-check.yaml 中的 test 覆盖，无需单独构建二进制
+    # if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    uses: ./.github/workflows/build-binary.yaml

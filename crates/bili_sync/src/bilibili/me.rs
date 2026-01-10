@@ -196,11 +196,19 @@ pub struct BangumiItem {
     pub cover: String,
     #[serde(default)]
     pub evaluate: String,
-    #[serde(alias = "total")]
+    /// 总集数，优先使用 formal_ep_count（正式集数），如果不存在则使用 total/total_count
+    #[serde(default = "default_total_count")]
     pub total_count: i32,
     #[serde(default, deserialize_with = "deserialize_bool_from_int")]
     pub is_finish: bool,
     pub season_type: u16,
+    /// 正式集数（对于连载番剧更准确）
+    #[serde(default)]
+    pub formal_ep_count: i32,
+}
+
+fn default_total_count() -> i32 {
+    0
 }
 
 /// 将整数反序列化为布尔值：0 -> false, 1 -> true

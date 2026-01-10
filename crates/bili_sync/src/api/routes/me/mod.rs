@@ -190,7 +190,7 @@ pub async fn get_followed_uppers(
     }))
 }
 
-/// 获取当前用户追番列表 (season_type = 1)
+/// 获取当前用户追番列表 (使用 B 站 API type=1，包含番剧和国创等)
 pub async fn get_followed_bangumi(
     Extension(db): Extension<DatabaseConnection>,
     Extension(bili_client): Extension<Arc<BiliClient>>,
@@ -212,19 +212,26 @@ pub async fn get_followed_bangumi(
         .into_iter()
         .collect();
 
-    let bangumi_list = bili_bangumi
+    let bangumi_list: Vec<Followed> = bili_bangumi
         .list
         .into_iter()
-        .filter(|b| b.season_type == 1) // 只返回番剧 (season_type = 1)
-        .map(|b| Followed::Bangumi {
-            season_id: b.season_id,
-            title: b.title,
-            media_count: b.total_count,
-            evaluate: b.evaluate,
-            cover: b.cover,
-            is_finish: b.is_finish,
-            season_type: b.season_type,
-            subscribed: subscribed_season_ids.contains(&b.season_id),
+        .map(|b| {
+            // 优先使用 formal_ep_count，如果为 0 则使用 total_count
+            let media_count = if b.formal_ep_count > 0 {
+                b.formal_ep_count
+            } else {
+                b.total_count
+            };
+            Followed::Bangumi {
+                season_id: b.season_id,
+                title: b.title,
+                media_count,
+                evaluate: b.evaluate,
+                cover: b.cover,
+                is_finish: b.is_finish,
+                season_type: b.season_type,
+                subscribed: subscribed_season_ids.contains(&b.season_id),
+            }
         })
         .collect();
 
@@ -234,7 +241,7 @@ pub async fn get_followed_bangumi(
     }))
 }
 
-/// 获取当前用户追剧列表 (season_type ∈ {2, 3, 4, 5, 7})
+/// 获取当前用户追剧列表 (使用 B 站 API type=2，包含电视剧、综艺等)
 pub async fn get_followed_drama(
     Extension(db): Extension<DatabaseConnection>,
     Extension(bili_client): Extension<Arc<BiliClient>>,
@@ -256,19 +263,26 @@ pub async fn get_followed_drama(
         .into_iter()
         .collect();
 
-    let drama_list = bili_bangumi
+    let drama_list: Vec<Followed> = bili_bangumi
         .list
         .into_iter()
-        .filter(|b| b.season_type != 1) // 排除番剧 (season_type = 1)
-        .map(|b| Followed::Bangumi {
-            season_id: b.season_id,
-            title: b.title,
-            media_count: b.total_count,
-            evaluate: b.evaluate,
-            cover: b.cover,
-            is_finish: b.is_finish,
-            season_type: b.season_type,
-            subscribed: subscribed_season_ids.contains(&b.season_id),
+        .map(|b| {
+            // 优先使用 formal_ep_count，如果为 0 则使用 total_count
+            let media_count = if b.formal_ep_count > 0 {
+                b.formal_ep_count
+            } else {
+                b.total_count
+            };
+            Followed::Bangumi {
+                season_id: b.season_id,
+                title: b.title,
+                media_count,
+                evaluate: b.evaluate,
+                cover: b.cover,
+                is_finish: b.is_finish,
+                season_type: b.season_type,
+                subscribed: subscribed_season_ids.contains(&b.season_id),
+            }
         })
         .collect();
 
