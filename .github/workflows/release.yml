@@ -1,13 +1,24 @@
-name: Build Main Binary And Release
+name: Release
 
 on:
   push:
     tags:
       - v*
+  workflow_dispatch:
+    inputs:
+      custom_tags:
+        description: '自定义 Docker 镜像标签 (用逗号分隔多个标签，例如: v2.0.0,latest)'
+        required: false
+        default: ''
+        type: string
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync
 
 jobs:
   build-binary:
     uses: ./.github/workflows/build-binary.yaml
+
   github-release:
     name: Create GitHub Release
     needs: build-binary
@@ -17,7 +28,7 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Download release artifact
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -27,8 +38,9 @@ jobs:
           files: bili-sync-rs*
           tag_name: ${{ github.ref_name }}
           draft: true
+
   docker-release:
-    name: Create Docker Image
+    name: Build and Push Docker Image
     needs: build-binary
     runs-on: ubuntu-24.04
     permissions:
@@ -36,18 +48,26 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Download release artifact
+      - name: Download Linux x86_64 binary
         uses: actions/download-artifact@v4
         with:
-          merge-multiple: true
-      - name: Docker Meta
+          name: bili-sync-rs-Linux-x86_64
+          path: ./
+      - name: Download Linux ARM64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: bili-sync-rs-Linux-aarch64
+          path: ./
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
             type=raw,value=${{ github.ref_name }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -62,9 +82,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: |
-            linux/amd64
-            linux/arm64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -72,7 +90,8 @@ jobs:
           cache-to: type=gha, scope=${{ github.workflow }}
       - name: Update DockerHub description
         uses: peter-evans/dockerhub-description@v3
+        continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/bili-sync
+          repository: ${{ env.IMAGE_NAME }}
