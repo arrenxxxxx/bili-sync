@@ -42,10 +42,10 @@ async fn get_cached_season_title(
     _token: CancellationToken,
 ) -> Option<String> {
     // 先检查缓存
-    if let Ok(cache) = season_title_cache().lock() {
-        if let Some(title) = cache.get(season_id) {
-            return Some(title.clone());
-        }
+    if let Ok(cache) = season_title_cache().lock()
+        && let Some(title) = cache.get(season_id)
+    {
+        return Some(title.clone());
     }
 
     // 缓存未命中，从API获取
@@ -226,10 +226,8 @@ pub async fn fetch_video_details(
                         .into_iter()
                         .map(|mut p| {
                             // 对于番剧花絮，使用 show_title 作为 page name
-                            if is_bangumi_extra {
-                                if let Some(ref show_title) = video_model.show_title {
-                                    p.name = show_title.clone();
-                                }
+                            if is_bangumi_extra && let Some(ref show_title) = video_model.show_title {
+                                p.name = show_title.clone();
                             }
                             p.into_active_model(video_model.id)
                         })
@@ -283,12 +281,13 @@ pub async fn download_unprocessed_videos(
     let mut stream = tasks
         // 触发风控时设置 download_aborted 标记并终止流
         .take_while(|res| {
+            if let Err(e) = res
+                && let Some(e) = e.downcast_ref::<BiliError>()
+                && e.is_risk_control_related()
+            {
+                risk_control_related_error = Some(e.clone());
+            }
             if let Err(e) = res {
-                if let Some(e) = e.downcast_ref::<BiliError>() {
-                    if e.is_risk_control_related() {
-                        risk_control_related_error = Some(e.clone());
-                    }
-                }
                 // 记录错误日志
                 tracing::error!("下载视频失败: {}", e);
             }
@@ -433,12 +432,11 @@ pub async fn download_video_pages(
             ExecutionStatus::Fixed(_) => unreachable!(),
         });
     for result in results {
-        if let ExecutionStatus::Failed(e) = result {
-            if let Ok(e) = e.downcast::<BiliError>() {
-                if e.is_risk_control_related() {
-                    bail!(e);
-                }
-            }
+        if let ExecutionStatus::Failed(e) = result
+            && let Ok(e) = e.downcast::<BiliError>()
+            && e.is_risk_control_related()
+        {
+            bail!(e);
         }
     }
     let mut video_active_model: video::ActiveModel = video_model.into();
@@ -480,10 +478,10 @@ pub async fn dispatch_download_page(
                 }
                 Err(e) => {
                     tracing::error!("下载分页失败 (bvid: {}): {}", video_model.bvid, e);
-                    if let Some(e) = e.downcast_ref::<BiliError>() {
-                        if e.is_risk_control_related() {
-                            risk_control_related_error = Some(e.clone());
-                        }
+                    if let Some(e) = e.downcast_ref::<BiliError>()
+                        && e.is_risk_control_related()
+                    {
+                        risk_control_related_error = Some(e.clone());
                     }
                 }
             }
@@ -787,12 +785,11 @@ pub async fn download_page(
             ExecutionStatus::Fixed(_) => unreachable!(),
         });
     for result in results {
-        if let ExecutionStatus::Failed(e) = result {
-            if let Ok(e) = e.downcast::<BiliError>() {
-                if e.is_risk_control_related() {
-                    bail!(e);
-                }
-            }
+        if let ExecutionStatus::Failed(e) = result
+            && let Ok(e) = e.downcast::<BiliError>()
+            && e.is_risk_control_related()
+        {
+            bail!(e);
         }
     }
     let mut page_active_model: page::ActiveModel = page_model.into();

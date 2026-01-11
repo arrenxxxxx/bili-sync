@@ -67,10 +67,10 @@ impl VideoSource for submission::Model {
             // 同理，动态 API 的第一条内容可能是置顶的老视频，单独做个过滤
             // 其实不过滤也不影响逻辑正确性，因为后续 insert 发生冲突仍然会忽略掉
             // 此处主要是出于性能考虑，减少不必要的数据库操作
-            if let Ok(video_info) = video_info {
-                if video_info.release_datetime() > latest_row_at {
-                    return Some(video_info);
-                }
+            if let Ok(video_info) = video_info
+                && video_info.release_datetime() > latest_row_at
+            {
+                return Some(video_info);
             }
             None
         } else {

@@ -99,10 +99,11 @@ fn extract_season_number(episode_title: &str) -> i32 {
                 "十" => return 10,
                 _ => {
                     // 尝试解析阿拉伯数字
-                    if let Ok(season) = season_str.parse::<i32>() {
-                        if season > 0 && season <= 50 {
-                            return season;
-                        }
+                    if let Ok(season) = season_str.parse::<i32>()
+                        && season > 0
+                        && season <= 50
+                    {
+                        return season;
                     }
                 }
             }
@@ -118,10 +119,11 @@ fn extract_season_number(episode_title: &str) -> i32 {
                 .find(|c: char| !c.is_ascii_digit())
                 .unwrap_or(after_season.len());
             let season_str = &after_season[..season_end];
-            if let Ok(season) = season_str.parse::<i32>() {
-                if season > 0 && season <= 50 {
-                    return season;
-                }
+            if let Ok(season) = season_str.parse::<i32>()
+                && season > 0
+                && season <= 50
+            {
+                return season;
             }
         }
     }

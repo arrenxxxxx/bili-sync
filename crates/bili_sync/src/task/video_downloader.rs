@@ -361,11 +361,11 @@ async fn download_video(
                 &bili_client,
                 format!("处理 {} 时遇到错误：{:#}，跳过该视频源", display_name, e),
             );
-            if let Ok(e) = e.downcast::<BiliError>() {
-                if e.is_risk_control_related() {
-                    warn!("检测到风控，终止此轮视频下载任务..");
-                    break;
-                }
+            if let Ok(e) = e.downcast::<BiliError>()
+                && e.is_risk_control_related()
+            {
+                warn!("检测到风控，终止此轮视频下载任务..");
+                break;
             }
         }
     }
