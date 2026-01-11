@@ -12,7 +12,7 @@ use sea_orm::sea_query::SimpleExpr;
 use sea_orm::{DatabaseConnection, Unchanged};
 
 use crate::adapter::{_ActiveModel, VideoSource, VideoSourceEnum};
-use crate::bilibili::{BiliClient, BangumiList, Credential, VideoInfo};
+use crate::bilibili::{BangumiList, BiliClient, Credential, VideoInfo};
 
 impl VideoSource for bangumi::Model {
     fn display_name(&self) -> Cow<'static, str> {

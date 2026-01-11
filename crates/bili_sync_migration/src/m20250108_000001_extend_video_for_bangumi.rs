@@ -77,12 +77,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
         manager
-            .alter_table(
-                Table::alter()
-                    .table(Video::Table)
-                    .drop_column(Video::EpId)
-                    .to_owned(),
-            )
+            .alter_table(Table::alter().table(Video::Table).drop_column(Video::EpId).to_owned())
             .await?;
         manager
             .alter_table(
@@ -117,12 +112,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
         manager
-            .alter_table(
-                Table::alter()
-                    .table(Video::Table)
-                    .drop_column(Video::Actors)
-                    .to_owned(),
-            )
+            .alter_table(Table::alter().table(Video::Table).drop_column(Video::Actors).to_owned())
             .await?;
         Ok(())
     }

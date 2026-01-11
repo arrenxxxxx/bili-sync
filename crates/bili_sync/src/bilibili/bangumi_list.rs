@@ -72,23 +72,23 @@ struct SectionData {
 #[derive(Debug, Clone, serde::Deserialize)]
 struct Episode {
     #[serde(default)]
-    pub id: i64,              // ep_id
+    pub id: i64, // ep_id
     #[serde(default)]
-    pub aid: i64,             // 视频 aid
+    pub aid: i64, // 视频 aid
     #[serde(default)]
     pub bvid: String,
     #[serde(default)]
     pub cid: i64,
     #[serde(default)]
-    pub title: String,        // 集标题
+    pub title: String, // 集标题
     #[serde(default)]
-    pub long_title: String,   // 集副标题
+    pub long_title: String, // 集副标题
     #[serde(default)]
     pub badge: String,
     #[serde(default)]
     pub section_type: i32,
     #[serde(default)]
-    pub pub_time: i64,        // 发布时间戳
+    pub pub_time: i64, // 发布时间戳
     // 忽略其他复杂字段
     #[serde(default)]
     pub cover: String,
@@ -178,19 +178,14 @@ impl<'a> BangumiList<'a> {
         };
 
         // 获取 media_id，如果为空则使用 season_id 作为默认值
-        let media_id = data.get("media_id")
+        let media_id = data
+            .get("media_id")
             .and_then(|v| if !v.is_null() { v.as_i64() } else { None })
             .unwrap_or(season_id);
 
-        let title = data["title"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
+        let title = data["title"].as_str().unwrap_or_default().to_string();
 
-        let cover = data["cover"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
+        let cover = data["cover"].as_str().unwrap_or_default().to_string();
 
         let evaluate = data["rating"]
             .as_object()
@@ -199,18 +194,15 @@ impl<'a> BangumiList<'a> {
             .map(|s| s.to_string())
             .unwrap_or_default();
 
-        let total = data["total"]
-            .as_u64()
-            .unwrap_or(0) as u16;
+        let total = data["total"].as_u64().unwrap_or(0) as u16;
 
-        let is_finish = data.get("is_finish")
+        let is_finish = data
+            .get("is_finish")
             .and_then(|v| v.as_u64())
             .map(|v| v == 1)
             .unwrap_or(false);
 
-        let season_type = data.get("type")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u16;
+        let season_type = data.get("type").and_then(|v| v.as_u64()).unwrap_or(0) as u16;
 
         Ok(BangumiListInfo {
             season_id,

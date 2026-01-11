@@ -34,7 +34,12 @@ impl MigrationTrait for Migration {
                             .default(Expr::current_timestamp())
                             .not_null(),
                     )
-                    .col(ColumnDef::new(Bangumi::LatestRowAt).timestamp().not_null().default("1970-01-01 00:00:00"))
+                    .col(
+                        ColumnDef::new(Bangumi::LatestRowAt)
+                            .timestamp()
+                            .not_null()
+                            .default("1970-01-01 00:00:00"),
+                    )
                     .col(ColumnDef::new(Bangumi::Rule).text().null())
                     .col(ColumnDef::new(Bangumi::Enabled).boolean().not_null().default(true))
                     .to_owned(),
@@ -73,9 +78,7 @@ impl MigrationTrait for Migration {
             .await?;
         db.execute_unprepared("CREATE UNIQUE INDEX `idx_video_unique` ON `video` (ifnull(`collection_id`, -1), ifnull(`favorite_id`, -1), ifnull(`watch_later_id`, -1), ifnull(`submission_id`, -1), `bvid`)")
             .await?;
-        manager
-            .drop_table(Table::drop().table(Bangumi::Table).to_owned())
-            .await
+        manager.drop_table(Table::drop().table(Bangumi::Table).to_owned()).await
     }
 }
 

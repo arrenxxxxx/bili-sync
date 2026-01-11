@@ -24,15 +24,14 @@ impl MigrationTrait for Migration {
                 `latest_row_at` TEXT NOT NULL DEFAULT '1970-01-01 00:00:00',
                 `rule` TEXT,
                 `enabled` INTEGER NOT NULL DEFAULT 1
-            )"
+            )",
         )
         .await?;
-        db.execute_unprepared(
-            "INSERT INTO `bangumi_new` SELECT * FROM `bangumi`"
-        )
-        .await?;
+        db.execute_unprepared("INSERT INTO `bangumi_new` SELECT * FROM `bangumi`")
+            .await?;
         db.execute_unprepared("DROP TABLE `bangumi`").await?;
-        db.execute_unprepared("ALTER TABLE `bangumi_new` RENAME TO `bangumi`").await?;
+        db.execute_unprepared("ALTER TABLE `bangumi_new` RENAME TO `bangumi`")
+            .await?;
         Ok(())
     }
 
@@ -55,15 +54,14 @@ impl MigrationTrait for Migration {
                 `latest_row_at` TEXT NOT NULL,
                 `rule` TEXT,
                 `enabled` INTEGER NOT NULL DEFAULT 1
-            )"
+            )",
         )
         .await?;
-        db.execute_unprepared(
-            "INSERT INTO `bangumi_old` SELECT * FROM `bangumi`"
-        )
-        .await?;
+        db.execute_unprepared("INSERT INTO `bangumi_old` SELECT * FROM `bangumi`")
+            .await?;
         db.execute_unprepared("DROP TABLE `bangumi`").await?;
-        db.execute_unprepared("ALTER TABLE `bangumi_old` RENAME TO `bangumi`").await?;
+        db.execute_unprepared("ALTER TABLE `bangumi_old` RENAME TO `bangumi`")
+            .await?;
         Ok(())
     }
 }

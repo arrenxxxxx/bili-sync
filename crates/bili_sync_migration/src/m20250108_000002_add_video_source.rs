@@ -32,25 +32,90 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(VideoSource::SelectedSeasons).string().null()) // JSON array
                     // 通用配置
                     .col(ColumnDef::new(VideoSource::Enabled).boolean().not_null().default(true))
-                    .col(ColumnDef::new(VideoSource::ScanDeletedVideos).boolean().not_null().default(false))
+                    .col(
+                        ColumnDef::new(VideoSource::ScanDeletedVideos)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(VideoSource::CachedEpisodes).string().null()) // JSON cache
                     .col(ColumnDef::new(VideoSource::CacheUpdatedAt).string().null())
                     .col(ColumnDef::new(VideoSource::KeywordFilters).string().null())
                     .col(ColumnDef::new(VideoSource::KeywordFilterMode).string().null())
                     .col(ColumnDef::new(VideoSource::BlacklistKeywords).string().null())
                     .col(ColumnDef::new(VideoSource::WhitelistKeywords).string().null())
-                    .col(ColumnDef::new(VideoSource::KeywordCaseSensitive).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::AudioOnly).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::AudioOnlyM4aOnly).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::FlatFolder).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::DownloadDanmaku).boolean().not_null().default(true))
-                    .col(ColumnDef::new(VideoSource::DownloadSubtitle).boolean().not_null().default(true))
-                    .col(ColumnDef::new(VideoSource::AiRename).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::AiRenameVideoPrompt).string().not_null().default(""))
-                    .col(ColumnDef::new(VideoSource::AiRenameAudioPrompt).string().not_null().default(""))
-                    .col(ColumnDef::new(VideoSource::AiRenameEnableMultiPage).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::AiRenameEnableCollection).boolean().not_null().default(false))
-                    .col(ColumnDef::new(VideoSource::AiRenameEnableBangumi).boolean().not_null().default(false))
+                    .col(
+                        ColumnDef::new(VideoSource::KeywordCaseSensitive)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AudioOnly)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AudioOnlyM4aOnly)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::FlatFolder)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::DownloadDanmaku)
+                            .boolean()
+                            .not_null()
+                            .default(true),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::DownloadSubtitle)
+                            .boolean()
+                            .not_null()
+                            .default(true),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AiRename)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AiRenameVideoPrompt)
+                            .string()
+                            .not_null()
+                            .default(""),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AiRenameAudioPrompt)
+                            .string()
+                            .not_null()
+                            .default(""),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AiRenameEnableMultiPage)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AiRenameEnableCollection)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(VideoSource::AiRenameEnableBangumi)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .to_owned(),
             )
             .await?;

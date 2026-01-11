@@ -4,20 +4,20 @@ mod m20240322_000001_create_table;
 mod m20240505_130850_add_collection;
 mod m20240709_130914_watch_later;
 mod m20240724_161008_submission;
+mod m20250106_220000_add_bangumi;
+mod m20250108_000000_fix_bangumi_default;
+mod m20250108_000001_extend_video_for_bangumi;
+mod m20250108_000002_add_video_source;
+mod m20250108_000003_add_source_fields;
+mod m20250110_000001_add_selected_sections;
+mod m20250110_000002_add_show_title;
+mod m20250110_000003_add_section_title;
 mod m20250122_062926_add_latest_row_at;
 mod m20250612_090826_add_enabled;
 mod m20250613_043257_add_config;
 mod m20250712_080013_add_video_created_at_index;
 mod m20250903_094454_add_rule_and_should_download;
 mod m20251009_123713_add_use_dynamic_api;
-mod m20250110_000001_add_selected_sections;
-mod m20250110_000002_add_show_title;
-mod m20250110_000003_add_section_title;
-mod m20250106_220000_add_bangumi;
-mod m20250108_000000_fix_bangumi_default;
-mod m20250108_000001_extend_video_for_bangumi;
-mod m20250108_000002_add_video_source;
-mod m20250108_000003_add_source_fields;
 
 pub struct Migrator;
 

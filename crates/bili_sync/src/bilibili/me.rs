@@ -172,8 +172,8 @@ pub struct FollowedUpper {
 
 #[derive(Debug, Clone, Copy)]
 pub enum BangumiType {
-    Anime = 1,  // 番剧
-    Drama = 2,  // 追剧
+    Anime = 1, // 番剧
+    Drama = 2, // 追剧
 }
 
 #[derive(Debug, serde::Deserialize)]

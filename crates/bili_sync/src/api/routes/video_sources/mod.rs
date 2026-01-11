@@ -14,15 +14,16 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QuerySelect, QueryTr
 use crate::adapter::{_ActiveModel, VideoSource as _, VideoSourceEnum};
 use crate::api::error::InnerApiError;
 use crate::api::request::{
-    BangumiSectionsRequest, DefaultPathRequest, InsertBangumiRequest, InsertCollectionRequest, InsertFavoriteRequest, InsertSubmissionRequest,
-    UpdateVideoSourceRequest,
+    BangumiSectionsRequest, DefaultPathRequest, InsertBangumiRequest, InsertCollectionRequest, InsertFavoriteRequest,
+    InsertSubmissionRequest, UpdateVideoSourceRequest,
 };
 use crate::api::response::{
-    UpdateVideoSourceResponse, VideoSource, VideoSourceDetail, VideoSourceWithSeasonType, VideoSourcesDetailsResponse, VideoSourcesResponse,
+    UpdateVideoSourceResponse, VideoSource, VideoSourceDetail, VideoSourceWithSeasonType, VideoSourcesDetailsResponse,
+    VideoSourcesResponse,
 };
 use crate::api::wrapper::{ApiError, ApiResponse, ValidatedJson};
-use crate::bilibili::{BiliClient, BangumiList, Collection, CollectionItem, FavoriteList, Submission};
 use crate::bilibili::bangumi_list::SectionInfo;
+use crate::bilibili::{BangumiList, BiliClient, Collection, CollectionItem, FavoriteList, Submission};
 use crate::config::{PathSafeTemplate, TEMPLATE, VersionedConfig};
 use crate::utils::rule::FieldEvaluatable;
 
@@ -212,7 +213,14 @@ pub async fn get_video_sources_details(
         }
     }
 
-    for sources in [&mut collections, &mut favorites, &mut submissions, &mut watch_later, &mut bangumi, &mut drama] {
+    for sources in [
+        &mut collections,
+        &mut favorites,
+        &mut submissions,
+        &mut watch_later,
+        &mut bangumi,
+        &mut drama,
+    ] {
         sources.iter_mut().for_each(|item| {
             if let Some(rule) = &item.rule {
                 item.rule_display = Some(rule.to_string());
@@ -539,7 +547,7 @@ pub async fn insert_bangumi(
         season_type: Set(bangumi_info.season_type),
         selected_section_ids: Set(request.selected_section_ids),
         path: Set(request.path),
-        enabled: Set(true),  // 订阅后自动启用
+        enabled: Set(true), // 订阅后自动启用
         ..Default::default()
     })
     .exec(&db)

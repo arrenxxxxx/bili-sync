@@ -286,7 +286,8 @@ impl PageAnalyzer {
                 let (Some(url), Some(quality)) = (dolby_audio["baseUrl"].as_str(), dolby_audio["id"].as_u64()) else {
                     bail!("invalid dolby audio stream");
                 };
-                let quality = AudioQuality::from_repr(quality as usize).context("invalid dolby audio stream quality")?;
+                let quality =
+                    AudioQuality::from_repr(quality as usize).context("invalid dolby audio stream quality")?;
                 if quality >= filter_option.audio_min_quality && quality <= filter_option.audio_max_quality {
                     streams.push(Stream::DashAudio {
                         url: url.to_string(),

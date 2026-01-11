@@ -2,12 +2,12 @@
 
 pub mod prelude;
 
+pub mod bangumi;
 pub mod collection;
 pub mod config;
 pub mod favorite;
 pub mod page;
 pub mod submission;
 pub mod video;
-pub mod watch_later;
-pub mod bangumi;
 pub mod video_source;
+pub mod watch_later;

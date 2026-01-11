@@ -199,7 +199,9 @@ pub async fn get_followed_bangumi(
     let credential = &VersionedConfig::get().read().credential;
     let me = Me::new(bili_client.as_ref(), credential);
     let (page_num, page_size) = (params.page_num.unwrap_or(1), params.page_size.unwrap_or(20));
-    let bili_bangumi = me.get_followed_bangumi(page_num, page_size, crate::bilibili::BangumiType::Anime).await?;
+    let bili_bangumi = me
+        .get_followed_bangumi(page_num, page_size, crate::bilibili::BangumiType::Anime)
+        .await?;
 
     let bili_season_ids: Vec<_> = bili_bangumi.list.iter().map(|b| b.season_id).collect();
     let subscribed_season_ids: HashSet<i64> = bangumi::Entity::find()
@@ -250,7 +252,9 @@ pub async fn get_followed_drama(
     let credential = &VersionedConfig::get().read().credential;
     let me = Me::new(bili_client.as_ref(), credential);
     let (page_num, page_size) = (params.page_num.unwrap_or(1), params.page_size.unwrap_or(20));
-    let bili_bangumi = me.get_followed_bangumi(page_num, page_size, crate::bilibili::BangumiType::Drama).await?;
+    let bili_bangumi = me
+        .get_followed_bangumi(page_num, page_size, crate::bilibili::BangumiType::Drama)
+        .await?;
 
     let bili_season_ids: Vec<_> = bili_bangumi.list.iter().map(|b| b.season_id).collect();
     let subscribed_season_ids: HashSet<i64> = bangumi::Entity::find()

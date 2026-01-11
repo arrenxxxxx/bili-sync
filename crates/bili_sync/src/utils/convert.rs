@@ -162,7 +162,7 @@ impl VideoInfo {
                     actors: Set(actors),
                     ..default
                 }
-            },
+            }
             VideoInfo::Detail { .. } => unreachable!(),
         }
     }
@@ -204,7 +204,9 @@ impl VideoInfo {
                 // redirect_url 仅在视频为番剧、影视、纪录片等特殊视频时才会有值，如果为空说明是普通视频
                 // 对于番剧订阅的视频（bangumi_id 为 Some），允许 redirect_url 存在
                 // 仅在三种条件都满足时，或者视频属于番剧订阅时，才认为视频是可下载的
-                valid: Set(state == 0 && (is_upower_exclusive == is_upower_play) && (redirect_url.is_none() || base_model.bangumi_id.is_some())),
+                valid: Set(state == 0
+                    && (is_upower_exclusive == is_upower_play)
+                    && (redirect_url.is_none() || base_model.bangumi_id.is_some())),
                 upper_id: Set(upper.mid),
                 upper_name: Set(upper.name),
                 upper_face: Set(upper.face),

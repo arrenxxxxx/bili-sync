@@ -133,7 +133,8 @@ pub async fn get_enabled_video_sources(connection: &DatabaseConnection) -> Resul
             .filter(bangumi::Column::Enabled.eq(true))
             .all(connection),
     )?;
-    let mut sources = Vec::with_capacity(favorite.len() + watch_later.len() + submission.len() + collection.len() + bangumi.len());
+    let mut sources =
+        Vec::with_capacity(favorite.len() + watch_later.len() + submission.len() + collection.len() + bangumi.len());
     sources.extend(favorite.into_iter().map(VideoSourceEnum::from));
     sources.extend(watch_later.into_iter().map(VideoSourceEnum::from));
     sources.extend(submission.into_iter().map(VideoSourceEnum::from));

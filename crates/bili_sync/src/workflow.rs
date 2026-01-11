@@ -52,10 +52,7 @@ async fn get_cached_season_title(
     get_season_title_from_api(bili_client, season_id).await
 }
 
-async fn get_season_title_from_api(
-    bili_client: &BiliClient,
-    season_id: &str,
-) -> Option<String> {
+async fn get_season_title_from_api(bili_client: &BiliClient, season_id: &str) -> Option<String> {
     let url = format!("https://api.bilibili.com/pgc/view/web/season?season_id={}", season_id);
     tracing::debug!("获取番剧标题: {}", url);
 
@@ -218,7 +215,9 @@ pub async fn fetch_video_details(
                     // 构造 page model
                     let pages = std::mem::take(pages);
                     // 对于番剧花絮，使用友好的 page name（show_title）而不是原始文件名
-                    let is_bangumi_extra = video_model.section_title.as_ref()
+                    let is_bangumi_extra = video_model
+                        .section_title
+                        .as_ref()
                         .map(|s| !s.is_empty())
                         .unwrap_or(false)
                         || video_model.episode_number.is_none()
@@ -237,8 +236,8 @@ pub async fn fetch_video_details(
                         .collect::<Vec<page::ActiveModel>>();
                     // 更新 video model 的各项有关属性
                     // 花絮/PV/预告（没有集数）强制使用单页命名方式
-                    let is_bangumi_extra = video_model.episode_number.is_none()
-                        || video_model.episode_number == Some(0);
+                    let is_bangumi_extra =
+                        video_model.episode_number.is_none() || video_model.episode_number == Some(0);
                     let mut video_active_model = view_info.into_detail_model(video_model);
                     video_source.set_relation_id(&mut video_active_model);
                     video_active_model.single_page = Set(Some(pages.len() == 1 || is_bangumi_extra));
@@ -326,8 +325,8 @@ pub async fn download_video_pages(
     let separate_status = status.should_run();
 
     // 判断是否为番剧
-    let is_bangumi = video_model.bangumi_id.is_some()
-        || (video_model.source_id.is_some() && video_model.source_type == Some(1));
+    let is_bangumi =
+        video_model.bangumi_id.is_some() || (video_model.source_id.is_some() && video_model.source_type == Some(1));
 
     // 未记录路径时填充，已经填充过路径时使用现有的
     let base_path = if !video_model.path.is_empty() {
@@ -335,7 +334,13 @@ pub async fn download_video_pages(
     } else {
         // 对于番剧花絮（有非空 section_title），直接使用视频源路径
         // 不使用 bangumi 模板，避免在 video.path 中存储剧集名目录
-        if is_bangumi && video_model.section_title.as_ref().map(|s| !s.is_empty()).unwrap_or(false) {
+        if is_bangumi
+            && video_model
+                .section_title
+                .as_ref()
+                .map(|s| !s.is_empty())
+                .unwrap_or(false)
+        {
             cx.video_source.path().to_path_buf()
         } else {
             // 根据视频类型选择不同的模板
@@ -349,18 +354,20 @@ pub async fn download_video_pages(
 
                 (
                     "bangumi",
-                    bangumi_page_format_args(&video_model, &page_models.first().unwrap(), &cx.config.time_format, api_title.as_deref()),
+                    bangumi_page_format_args(
+                        &video_model,
+                        &page_models.first().unwrap(),
+                        &cx.config.time_format,
+                        api_title.as_deref(),
+                    ),
                 )
             } else {
-                (
-                    "video",
-                    video_format_args(&video_model, &cx.config.time_format),
-                )
+                ("video", video_format_args(&video_model, &cx.config.time_format))
             };
 
-            cx.video_source.path().join(
-                cx.template.path_safe_render(template_name, &format_args)?,
-            )
+            cx.video_source
+                .path()
+                .join(cx.template.path_safe_render(template_name, &format_args)?)
         }
     };
     let upper_id = video_model.upper_id.to_string();
@@ -509,16 +516,16 @@ pub async fn download_page(
     let is_single_page = video_model.single_page.context("single_page is null")?;
 
     // 判断是否为番剧和花絮（提前计算，用于后续逻辑）
-    let is_bangumi = video_model.bangumi_id.is_some()
-        || (video_model.source_id.is_some() && video_model.source_type == Some(1));
+    let is_bangumi =
+        video_model.bangumi_id.is_some() || (video_model.source_id.is_some() && video_model.source_type == Some(1));
     // 检查 section_title 是否为非空字符串（花絮才有 section_title）
-    let has_section_title = video_model.section_title.as_ref()
+    let has_section_title = video_model
+        .section_title
+        .as_ref()
         .map(|s| !s.is_empty())
         .unwrap_or(false);
     let is_bangumi_extra = is_bangumi
-        && (has_section_title
-            || video_model.episode_number.is_none()
-            || video_model.episode_number == Some(0));
+        && (has_section_title || video_model.episode_number.is_none() || video_model.episode_number == Some(0));
 
     // 添加调试日志
     tracing::info!(
@@ -573,7 +580,10 @@ pub async fn download_page(
             } else if is_single_page {
                 // 单页下的路径是 {base_path}/{base_name}.mp4
                 (
-                    old_video_path.parent().context("invalid page path format")?.to_path_buf(),
+                    old_video_path
+                        .parent()
+                        .context("invalid page path format")?
+                        .to_path_buf(),
                     old_video_filename.trim_end_matches(".mp4").to_string(),
                 )
             } else {
@@ -594,7 +604,13 @@ pub async fn download_page(
         }
         _ => {
             // 对于番剧花絮，需要使用视频源的基础路径，而不是 video_model.path（包含剧集名）
-            let base_path = if is_bangumi && video_model.section_title.as_ref().map(|s| !s.is_empty()).unwrap_or(false) {
+            let base_path = if is_bangumi
+                && video_model
+                    .section_title
+                    .as_ref()
+                    .map(|s| !s.is_empty())
+                    .unwrap_or(false)
+            {
                 // 番剧花絮：使用视频源的基础路径 + section_title
                 let source_base_path = cx.video_source.path();
                 if let Some(ref section_title) = video_model.section_title {
@@ -657,41 +673,42 @@ pub async fn download_page(
                 base_path.display()
             );
             (base_path, base_name)
-        },
+        }
     };
 
-    let (poster_path, video_path, nfo_path, danmaku_path, fanart_path, subtitle_path) = if is_single_page || is_bangumi_extra {
-        // 单页视频或番剧花絮使用简单路径格式
-        (
-            base_path.join(format!("{}-poster.jpg", &base_name)),
-            base_path.join(format!("{}.mp4", &base_name)),
-            base_path.join(format!("{}.nfo", &base_name)),
-            base_path.join(format!("{}.zh-CN.default.ass", &base_name)),
-            Some(base_path.join(format!("{}-fanart.jpg", &base_name))),
-            base_path.join(format!("{}.srt", &base_name)),
-        )
-    } else {
-        // 多页视频使用 Season 1 + S01Exx 格式
-        (
-            base_path
-                .join("Season 1")
-                .join(format!("{} - S01E{:0>2}-thumb.jpg", &base_name, page_model.pid)),
-            base_path
-                .join("Season 1")
-                .join(format!("{} - S01E{:0>2}.mp4", &base_name, page_model.pid)),
-            base_path
-                .join("Season 1")
-                .join(format!("{} - S01E{:0>2}.nfo", &base_name, page_model.pid)),
-            base_path
-                .join("Season 1")
-                .join(format!("{} - S01E{:0>2}.zh-CN.default.ass", &base_name, page_model.pid)),
-            // 对于多页视频，会在上一步 fetch_video_poster 中获取剧集的 fanart，无需在此处下载单集的
-            None,
-            base_path
-                .join("Season 1")
-                .join(format!("{} - S01E{:0>2}.srt", &base_name, page_model.pid)),
-        )
-    };
+    let (poster_path, video_path, nfo_path, danmaku_path, fanart_path, subtitle_path) =
+        if is_single_page || is_bangumi_extra {
+            // 单页视频或番剧花絮使用简单路径格式
+            (
+                base_path.join(format!("{}-poster.jpg", &base_name)),
+                base_path.join(format!("{}.mp4", &base_name)),
+                base_path.join(format!("{}.nfo", &base_name)),
+                base_path.join(format!("{}.zh-CN.default.ass", &base_name)),
+                Some(base_path.join(format!("{}-fanart.jpg", &base_name))),
+                base_path.join(format!("{}.srt", &base_name)),
+            )
+        } else {
+            // 多页视频使用 Season 1 + S01Exx 格式
+            (
+                base_path
+                    .join("Season 1")
+                    .join(format!("{} - S01E{:0>2}-thumb.jpg", &base_name, page_model.pid)),
+                base_path
+                    .join("Season 1")
+                    .join(format!("{} - S01E{:0>2}.mp4", &base_name, page_model.pid)),
+                base_path
+                    .join("Season 1")
+                    .join(format!("{} - S01E{:0>2}.nfo", &base_name, page_model.pid)),
+                base_path
+                    .join("Season 1")
+                    .join(format!("{} - S01E{:0>2}.zh-CN.default.ass", &base_name, page_model.pid)),
+                // 对于多页视频，会在上一步 fetch_video_poster 中获取剧集的 fanart，无需在此处下载单集的
+                None,
+                base_path
+                    .join("Season 1")
+                    .join(format!("{} - S01E{:0>2}.srt", &base_name, page_model.pid)),
+            )
+        };
     let dimension = match (page_model.width, page_model.height) {
         (Some(width), Some(height)) => Some(Dimension {
             width,
@@ -1014,10 +1031,7 @@ pub async fn generate_video_nfo(
     Ok(ExecutionStatus::Succeeded)
 }
 
-async fn generate_bangumi_nfo(
-    bangumi_model: &bili_sync_entity::bangumi::Model,
-    nfo_path: PathBuf,
-) -> Result<()> {
+async fn generate_bangumi_nfo(bangumi_model: &bili_sync_entity::bangumi::Model, nfo_path: PathBuf) -> Result<()> {
     let nfo = NFO::Bangumi(bangumi_model.to_nfo(crate::config::NFOTimeType::PubTime));
     generate_nfo(nfo, nfo_path).await
 }

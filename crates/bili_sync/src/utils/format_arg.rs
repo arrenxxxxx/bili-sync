@@ -10,9 +10,9 @@ fn extract_series_title_with_context(
     if let Some(title) = api_title {
         // 标准化空格：将多个连续空格合并为单个空格，去除括号前的空格
         let normalized_title = title
-            .split_whitespace()  // 分割字符串，自动去除首尾空格并处理连续空格
+            .split_whitespace() // 分割字符串，自动去除首尾空格并处理连续空格
             .collect::<Vec<_>>()
-            .join(" ")           // 用单个空格重新连接
+            .join(" ") // 用单个空格重新连接
             .replace(" （", "（") // 去除全角括号前的空格
             .replace(" (", "("); // 去除半角括号前的空格
         return Some(normalized_title);
@@ -156,7 +156,7 @@ pub fn bangumi_page_format_args(
     // 优先从标题中提取季度编号，如果提取失败则使用数据库中存储的值，最后默认为1
     let raw_season_number = match extract_season_number(&video_model.name) {
         1 => video_model.season_number.unwrap_or(1), // 如果从标题提取到1，可能是默认值，使用数据库值
-        extracted => extracted, // 从标题提取到了明确的季度信息，使用提取的值
+        extracted => extracted,                      // 从标题提取到了明确的季度信息，使用提取的值
     } as u32;
 
     // 从发布时间提取年份
@@ -164,15 +164,14 @@ pub fn bangumi_page_format_args(
 
     // 提取番剧系列标题用于文件夹命名
     // 优先使用API标题，如果API获取失败则从 video_model.name 中提取
-    let series_title = extract_series_title_with_context(video_model, api_title)
-        .unwrap_or_else(|| {
-            tracing::debug!(
-                "番剧视频 {} (BVID: {}) 无法提取标题，使用空字符串",
-                video_model.name,
-                video_model.bvid
-            );
-            String::new()
-        });
+    let series_title = extract_series_title_with_context(video_model, api_title).unwrap_or_else(|| {
+        tracing::debug!(
+            "番剧视频 {} (BVID: {}) 无法提取标题，使用空字符串",
+            video_model.name,
+            video_model.bvid
+        );
+        String::new()
+    });
 
     // 提取版本信息用于文件名区分
     let version_info = extract_version_info(&video_model.name);
@@ -192,10 +191,10 @@ pub fn bangumi_page_format_args(
 
     // 内容类型判断
     let content_type = match video_model.category {
-        1 => "动画", // 动画分类
+        1 => "动画",     // 动画分类
         177 => "纪录片", // 纪录片分类
-        155 => "时尚", // 时尚分类
-        _ => "番剧", // 默认为番剧
+        155 => "时尚",   // 时尚分类
+        _ => "番剧",     // 默认为番剧
     };
 
     // 播出状态

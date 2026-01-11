@@ -9,8 +9,8 @@ use validator::Validate;
 
 use crate::bilibili::{Credential, DanmakuOption, FilterOption};
 use crate::config::default::{
-    default_auth_token, default_bind_address, default_bangumi_name, default_bangumi_path, default_collection_path, default_favorite_path, default_submission_path,
-    default_time_format,
+    default_auth_token, default_bangumi_name, default_bangumi_path, default_bind_address, default_collection_path,
+    default_favorite_path, default_submission_path, default_time_format,
 };
 use crate::config::item::{ConcurrentLimit, NFOTimeType, SkipOption, Trigger};
 use crate::notifier::Notifier;

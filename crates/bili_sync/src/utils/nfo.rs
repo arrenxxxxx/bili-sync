@@ -205,10 +205,7 @@ impl NFO<'_> {
         Ok(())
     }
 
-    async fn write_bangumi_nfo(
-        mut writer: Writer<&mut BufWriter<&mut Vec<u8>>>,
-        bangumi: Bangumi<'_>,
-    ) -> Result<()> {
+    async fn write_bangumi_nfo(mut writer: Writer<&mut BufWriter<&mut Vec<u8>>>, bangumi: Bangumi<'_>) -> Result<()> {
         // 根据 season_type 映射到 genre 标签
         let genre = match bangumi.season_type {
             1 => "番剧",
