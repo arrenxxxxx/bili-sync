@@ -129,7 +129,9 @@
 		}
 		saving = true;
 		try {
-			let response = await api.updateVideoSource(editingType, editingSource.id, {
+			// drama 类型需要映射到 bangumi，因为后端 API 只支持 bangumi
+			const apiType = editingType === 'drama' ? 'bangumi' : editingType;
+			let response = await api.updateVideoSource(apiType, editingSource.id, {
 				path: editForm.path,
 				enabled: editForm.enabled,
 				rule: editForm.rule,
@@ -165,7 +167,9 @@
 		if (!evaluateSource) return;
 		evaluating = true;
 		try {
-			let response = await api.evaluateVideoSourceRules(evaluateType, evaluateSource.id);
+			// drama 类型需要映射到 bangumi，因为后端 API 只支持 bangumi
+			const apiType = evaluateType === 'drama' ? 'bangumi' : evaluateType;
+			let response = await api.evaluateVideoSourceRules(apiType, evaluateSource.id);
 			if (response && response.data) {
 				showEvaluateDialog = false;
 				toast.success('重新评估规则成功');
@@ -185,7 +189,9 @@
 		if (!removeSource) return;
 		removing = true;
 		try {
-			let response = await api.removeVideoSource(removeType, removeSource.id);
+			// drama 类型需要映射到 bangumi，因为后端 API 只支持 bangumi
+			const apiType = removeType === 'drama' ? 'bangumi' : removeType;
+			let response = await api.removeVideoSource(apiType, removeSource.id);
 			if (response && response.data) {
 				if (videoSourcesData) {
 					const sources = videoSourcesData[

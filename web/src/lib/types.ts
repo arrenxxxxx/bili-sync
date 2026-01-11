@@ -203,6 +203,14 @@ export interface InsertSubmissionRequest {
 export interface InsertBangumiRequest {
 	season_id: number;
 	path: string;
+	selected_section_ids?: string; // JSON 数组字符串
+}
+
+export interface SectionInfo {
+	id: number;
+	title: string;
+	type: number;
+	episode_count: number;
 }
 
 export interface Condition<T> {

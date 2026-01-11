@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { toast } from 'svelte-sonner';
 	import {
 		Sheet,
@@ -18,7 +19,8 @@
 		InsertCollectionRequest,
 		InsertSubmissionRequest,
 		InsertBangumiRequest,
-		ApiError
+		ApiError,
+		SectionInfo
 	} from '$lib/types';
 
 	interface Props {
@@ -31,19 +33,22 @@
 
 	let customPath = $state('');
 	let loading = $state(false);
+	let sections = $state<SectionInfo[]>([]);
+	let selectedSectionIds = $state<number[]>([]);
+	let loadingSections = $state(false);
 
 	// 根据类型和 item 生成默认路径
 	async function generateDefaultPath(): Promise<string> {
 		if (!item || !itemTitle) return '';
+		// 番剧不设置默认路径
+		if (item.type === 'bangumi') return '';
 		// 根据 item.type 映射到对应的 API 类型
 		const apiType =
 			item.type === 'favorite'
 				? 'favorites'
 				: item.type === 'collection'
 					? 'collections'
-					: item.type === 'bangumi'
-						? 'bangumi'
-						: 'submissions';
+					: 'submissions';
 		return (await api.getDefaultPath(apiType, itemTitle)).data;
 	}
 
@@ -115,7 +120,8 @@
 				case 'bangumi': {
 					const request: InsertBangumiRequest = {
 						season_id: item.season_id,
-						path: customPath.trim()
+						path: customPath.trim(),
+						selected_section_ids: JSON.stringify(selectedSectionIds)
 					};
 					response = await api.insertBangumi(request);
 					break;
@@ -141,6 +147,43 @@
 		}
 	}
 
+	async function loadSections() {
+		if (item?.type !== 'bangumi') return;
+
+		loadingSections = true;
+		try {
+			const response = await api.getBangumiSections(item.season_id);
+			if (response?.data) {
+				sections = response.data;
+				// 默认选中所有 section
+				selectedSectionIds = sections.map(s => s.id);
+			}
+		} catch (error) {
+			console.error('加载内容列表失败:', error);
+			toast.error('加载内容列表失败', {
+				description: (error as ApiError).message
+			});
+		} finally {
+			loadingSections = false;
+		}
+	}
+
+	function toggleSection(sectionId: number) {
+		if (selectedSectionIds.includes(sectionId)) {
+			selectedSectionIds = selectedSectionIds.filter(id => id !== sectionId);
+		} else {
+			selectedSectionIds = [...selectedSectionIds, sectionId];
+		}
+	}
+
+	function toggleAllSections() {
+		if (selectedSectionIds.length === sections.length) {
+			selectedSectionIds = [];
+		} else {
+			selectedSectionIds = sections.map(s => s.id);
+		}
+	}
+
 	function handleCancel() {
 		open = false;
 	}
@@ -157,6 +200,13 @@
 					});
 					customPath = '';
 				});
+			// 重置 sections
+			sections = [];
+			selectedSectionIds = [];
+			// 如果是番剧，加载 sections
+			if (item.type === 'bangumi') {
+				loadSections();
+			}
 		}
 	});
 
@@ -221,6 +271,45 @@
 						</div>
 					</div>
 				</div>
+
+				<!-- 内容选择（仅番剧） -->
+				{#if item!.type === 'bangumi' && sections.length > 0}
+					<div class="space-y-3">
+						<div class="flex items-center justify-between">
+							<Label class="text-sm font-medium">选择要下载的内容</Label>
+							<button
+								type="button"
+								onclick={toggleAllSections}
+								class="text-xs text-muted-foreground hover:text-foreground"
+							>
+								{selectedSectionIds.length === sections.length
+									? '取消全选'
+									: '全选'}
+							</button>
+						</div>
+						{#if loadingSections}
+							<div class="text-muted-foreground text-sm">加载中...</div>
+						{:else}
+							<div class="space-y-2">
+								{#each sections as section (section.id)}
+									<div class="flex items-center gap-3 rounded-md border p-3">
+										<Checkbox
+											checked={selectedSectionIds.includes(section.id)}
+											onCheckedChange={() => toggleSection(section.id)}
+											disabled={loading}
+										/>
+										<div class="flex-1">
+											<div class="text-sm font-medium">{section.title}</div>
+											<div class="text-muted-foreground text-xs">
+												{section.episode_count} 个视频
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 

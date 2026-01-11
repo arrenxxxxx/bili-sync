@@ -17,6 +17,7 @@ import type {
 	InsertCollectionRequest,
 	InsertSubmissionRequest,
 	InsertBangumiRequest,
+	SectionInfo,
 	VideoSourcesDetailsResponse,
 	UpdateVideoSourceRequest,
 	Config,
@@ -250,6 +251,10 @@ class ApiClient {
 		return this.post<boolean>('/video-sources/bangumi', request);
 	}
 
+	async getBangumiSections(seasonId: number): Promise<ApiResponse<SectionInfo[]>> {
+		return this.get<SectionInfo[]>('/video-sources/bangumi/sections', { season_id: seasonId });
+	}
+
 	async getVideoSourcesDetails(): Promise<ApiResponse<VideoSourcesDetailsResponse>> {
 		return this.get<VideoSourcesDetailsResponse>('/video-sources/details');
 	}
@@ -334,6 +339,7 @@ const api = {
 	insertCollection: (request: InsertCollectionRequest) => apiClient.insertCollection(request),
 	insertSubmission: (request: InsertSubmissionRequest) => apiClient.insertSubmission(request),
 	insertBangumi: (request: InsertBangumiRequest) => apiClient.insertBangumi(request),
+	getBangumiSections: (seasonId: number) => apiClient.getBangumiSections(seasonId),
 	getVideoSourcesDetails: () => apiClient.getVideoSourcesDetails(),
 	updateVideoSource: (type: string, id: number, request: UpdateVideoSourceRequest) =>
 		apiClient.updateVideoSource(type, id, request),

@@ -41,6 +41,8 @@ pub struct Model {
     pub season_number: Option<i32>,
     pub episode_number: Option<i32>,
     pub share_copy: Option<String>,
+    pub show_title: Option<String>,
+    pub section_title: Option<String>,
     pub show_season_type: Option<i32>,
     pub actors: Option<String>,
 }

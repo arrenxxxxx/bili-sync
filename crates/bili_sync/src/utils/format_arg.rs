@@ -57,9 +57,12 @@ pub fn page_format_args(
     page_model: &bili_sync_entity::page::Model,
     time_format: &str,
 ) -> serde_json::Value {
+    // 优先使用 show_title，如果没有则使用 name
+    let display_title = video_model.show_title.as_ref().unwrap_or(&video_model.name);
     json!({
         "bvid": &video_model.bvid,
-        "title": &video_model.name,
+        "title": display_title,
+        "name": &video_model.name,
         "upper_name": &video_model.upper_name,
         "upper_mid": &video_model.upper_id,
         "ptitle": &page_model.name,

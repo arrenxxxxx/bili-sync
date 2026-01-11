@@ -124,7 +124,7 @@ impl Default for Config {
             danmaku_option: DanmakuOption::default(),
             skip_option: SkipOption::default(),
             video_name: "{{title}}".to_owned(),
-            page_name: "{{bvid}}".to_owned(),
+            page_name: "{{title}}".to_owned(),
             bangumi_name: default_bangumi_name(),
             notifiers: None,
             favorite_default_path: default_favorite_path(),

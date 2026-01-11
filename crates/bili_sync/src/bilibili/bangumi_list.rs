@@ -2,13 +2,23 @@ use anyhow::{Context, Result, anyhow};
 use async_stream::try_stream;
 use chrono::{DateTime, Utc};
 use futures::Stream;
+use serde::{Deserialize, Serialize};
 
 use crate::bilibili::{BiliClient, Credential, Validate, VideoInfo};
+
+/// 剧集与其所属 section 的配对
+#[derive(Clone, Debug)]
+struct EpisodeWithSection {
+    episode: Episode,
+    section_title: Option<String>,
+}
 
 pub struct BangumiList<'a> {
     client: &'a BiliClient,
     season_id: i64,
     credential: &'a Credential,
+    /// 可选：仅获取指定 section_id 的剧集
+    selected_section_ids: Option<Vec<i64>>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -23,19 +33,55 @@ pub struct BangumiListInfo {
     pub season_type: u16,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SectionInfo {
+    pub id: i64,
+    pub title: String,
+    #[serde(rename = "type")]
+    pub section_type: i32,
+    pub episode_count: usize,
+}
+
 #[derive(Debug, serde::Deserialize)]
 struct SeasonData {
     #[serde(default)]
     pub episodes: Vec<Episode>,
+    #[serde(default)]
+    #[serde(rename = "section")]
+    pub sections: Vec<SectionData>,
+    // 忽略其他字段
 }
 
 #[derive(Debug, serde::Deserialize)]
+struct SectionData {
+    pub id: i64,
+    pub title: String,
+    #[serde(rename = "type")]
+    pub section_type: i32,
+    #[serde(default)]
+    pub episodes: Vec<Episode>,
+    // 忽略其他字段
+    #[serde(default)]
+    pub attr: i32,
+    #[serde(default)]
+    pub episode_id: i64,
+    #[serde(default)]
+    pub episode_ids: Vec<i64>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
 struct Episode {
+    #[serde(default)]
     pub id: i64,              // ep_id
+    #[serde(default)]
     pub aid: i64,             // 视频 aid
+    #[serde(default)]
     pub bvid: String,
+    #[serde(default)]
     pub cid: i64,
+    #[serde(default)]
     pub title: String,        // 集标题
+    #[serde(default)]
     pub long_title: String,   // 集副标题
     #[serde(default)]
     pub badge: String,
@@ -43,6 +89,13 @@ struct Episode {
     pub section_type: i32,
     #[serde(default)]
     pub pub_time: i64,        // 发布时间戳
+    // 忽略其他复杂字段
+    #[serde(default)]
+    pub cover: String,
+    #[serde(default)]
+    pub from: String,
+    #[serde(default)]
+    pub link: String,
 }
 
 impl<'a> BangumiList<'a> {
@@ -51,7 +104,46 @@ impl<'a> BangumiList<'a> {
             client,
             season_id,
             credential,
+            selected_section_ids: None,
         }
+    }
+
+    /// 设置要下载的 section_id 列表
+    pub fn with_selected_sections(mut self, section_ids: Vec<i64>) -> Self {
+        self.selected_section_ids = Some(section_ids);
+        self
+    }
+
+    /// 获取可用的 section 列表
+    pub async fn get_sections(&self) -> Result<Vec<SectionInfo>> {
+        let res = self
+            .client
+            .request(
+                reqwest::Method::GET,
+                "https://api.bilibili.com/pgc/view/web/season",
+                self.credential,
+            )
+            .await
+            .query(&[("season_id", self.season_id)])
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<serde_json::Value>()
+            .await?
+            .validate()?;
+
+        let sections: Vec<SectionData> = serde_json::from_value(res["result"]["section"].clone())
+            .with_context(|| format!("failed to parse sections for season_id {}", self.season_id))?;
+
+        Ok(sections
+            .into_iter()
+            .map(|s| SectionInfo {
+                id: s.id,
+                title: s.title,
+                section_type: s.section_type,
+                episode_count: s.episodes.len(),
+            })
+            .collect())
     }
 
     pub async fn get_info(&self) -> Result<BangumiListInfo> {
@@ -132,7 +224,7 @@ impl<'a> BangumiList<'a> {
         })
     }
 
-    async fn get_episodes(&self) -> Result<Vec<Episode>> {
+    async fn get_episodes(&self) -> Result<Vec<EpisodeWithSection>> {
         let mut res = self
             .client
             .request(
@@ -159,7 +251,66 @@ impl<'a> BangumiList<'a> {
 
         let season_data: SeasonData = serde_json::from_value(res["result"].take())
             .with_context(|| format!("failed to parse bangumi episodes for season_id {}", self.season_id))?;
-        Ok(season_data.episodes)
+
+        tracing::debug!(
+            "bangumi season_id {}: {} episodes in main list, {} sections parsed",
+            self.season_id,
+            season_data.episodes.len(),
+            season_data.sections.len()
+        );
+
+        // 如果指定了 selected_section_ids，获取正片 + 选中的花絮 section
+        if let Some(ref section_ids) = self.selected_section_ids {
+            let mut episodes_with_section = Vec::new();
+
+            // 1. 先添加所有正片（section_type == 0）
+            for episode in &season_data.episodes {
+                if episode.section_type == 0 {
+                    episodes_with_section.push(EpisodeWithSection {
+                        episode: episode.clone(),
+                        section_title: None,
+                    });
+                }
+            }
+
+            // 2. 再添加选中的花絮 section 中的剧集
+            for section in &season_data.sections {
+                if section_ids.contains(&section.id) {
+                    let section_title = section.title.clone();
+                    for episode in &section.episodes {
+                        episodes_with_section.push(EpisodeWithSection {
+                            episode: episode.clone(),
+                            section_title: Some(section_title.clone()),
+                        });
+                    }
+                }
+            }
+
+            tracing::info!(
+                "bangumi season_id {}: got {} main episodes + {} extra episodes from selected sections",
+                self.season_id,
+                season_data.episodes.iter().filter(|e| e.section_type == 0).count(),
+                episodes_with_section.len() - season_data.episodes.iter().filter(|e| e.section_type == 0).count()
+            );
+            Ok(episodes_with_section)
+        } else {
+            // 如果没有指定，获取所有正片（section_type == 0）
+            let episodes: Vec<_> = season_data
+                .episodes
+                .into_iter()
+                .filter(|e| e.section_type == 0)
+                .map(|e| EpisodeWithSection {
+                    episode: e,
+                    section_title: None,
+                })
+                .collect();
+            tracing::debug!(
+                "bangumi season_id {}: got {} main episodes (section_type == 0)",
+                self.season_id,
+                episodes.len()
+            );
+            Ok(episodes)
+        }
     }
 
     pub fn into_video_stream(self) -> impl Stream<Item = Result<VideoInfo>> + 'a {
@@ -175,27 +326,37 @@ impl<'a> BangumiList<'a> {
             let bangumi_info = self.get_info().await
                 .with_context(|| format!("failed to get bangumi info for season_id {}", self.season_id))?;
 
-            for episode in episodes {
-                // 跳过 PV、预告等非正片内容（section_type: 1 表示预告片）
-                if episode.section_type == 1 {
-                    continue;
-                }
-
+            for EpisodeWithSection { episode, section_title } in episodes {
                 let pubtime = DateTime::from_timestamp(episode.pub_time, 0).unwrap_or_else(Utc::now);
-                tracing::debug!(
-                    "番剧剧集: bvid={}, title={}, pub_time={}, pubtime={}",
-                    episode.bvid,
-                    episode.title,
-                    episode.pub_time,
-                    pubtime
-                );
 
                 // 解析集数
                 let episode_number = episode.title.parse::<i32>().ok();
 
                 // 构建完整的标题：番剧名称 + 集数信息
+                // 优先使用 long_title，如果为空则使用 title
                 // 例如：灵笼 第一季_第001话
-                let full_title = format!("{}_{}", bangumi_info.title, episode.title);
+                let episode_title = if !episode.long_title.is_empty() {
+                    &episode.long_title
+                } else if !episode.title.is_empty() && !episode.title.contains('.') {
+                    // title 不包含 '.' 说明可能是正常标题，而不是文件名
+                    &episode.title
+                } else {
+                    // 使用 badge 作为标题（如 "PV"、"预告" 等）
+                    if !episode.badge.is_empty() {
+                        &episode.badge
+                    } else {
+                        &episode.title
+                    }
+                };
+                let full_title = format!("{}_{}", bangumi_info.title, episode_title);
+
+                // 对于花絮（有 section_title 的情况），show_title 使用简单的 episode_title
+                // 而不是完整的 episode.title，避免文件名过长
+                let show_title = if section_title.is_some() {
+                    episode_title.to_string()
+                } else {
+                    episode.title.clone()
+                };
 
                 let video_info = VideoInfo::Bangumi {
                     title: full_title,
@@ -207,7 +368,8 @@ impl<'a> BangumiList<'a> {
                     cover: bangumi_info.cover.clone(),
                     intro: String::new(),
                     pubtime,
-                    show_title: Some(episode.title.clone()),
+                    show_title: Some(show_title),
+                    section_title,
                     season_number: None,
                     episode_number,
                     share_copy: None,

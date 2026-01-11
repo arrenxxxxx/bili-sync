@@ -56,7 +56,17 @@ impl VideoSource for bangumi::Model {
         VideoSourceEnum,
         Pin<Box<dyn Stream<Item = Result<VideoInfo>> + Send + 'a>>,
     )> {
-        let bangumi = BangumiList::new(bili_client, self.season_id, credential);
+        let mut bangumi = BangumiList::new(bili_client, self.season_id, credential);
+
+        // 解析 selected_section_ids，只有在非空时才设置过滤
+        if !self.selected_section_ids.is_empty() {
+            if let Ok(section_ids) = serde_json::from_str::<Vec<i64>>(&self.selected_section_ids) {
+                if !section_ids.is_empty() {
+                    bangumi = bangumi.with_selected_sections(section_ids);
+                }
+            }
+        }
+
         let bangumi_info = bangumi.get_info().await?;
         ensure!(
             bangumi_info.season_id == self.season_id,

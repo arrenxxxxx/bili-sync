@@ -18,6 +18,8 @@ pub struct Model {
     pub total: u16,
     pub is_finish: bool,
     pub season_type: u16,
+    /// 用户选择的 花絮 列表（JSON 字符串格式）
+    pub selected_section_ids: String,
     pub path: String,
     pub created_at: String,
     pub latest_row_at: DateTime,

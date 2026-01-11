@@ -14,7 +14,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QuerySelect, QueryTr
 use crate::adapter::{_ActiveModel, VideoSource as _, VideoSourceEnum};
 use crate::api::error::InnerApiError;
 use crate::api::request::{
-    DefaultPathRequest, InsertBangumiRequest, InsertCollectionRequest, InsertFavoriteRequest, InsertSubmissionRequest,
+    BangumiSectionsRequest, DefaultPathRequest, InsertBangumiRequest, InsertCollectionRequest, InsertFavoriteRequest, InsertSubmissionRequest,
     UpdateVideoSourceRequest,
 };
 use crate::api::response::{
@@ -22,6 +22,7 @@ use crate::api::response::{
 };
 use crate::api::wrapper::{ApiError, ApiResponse, ValidatedJson};
 use crate::bilibili::{BiliClient, BangumiList, Collection, CollectionItem, FavoriteList, Submission};
+use crate::bilibili::bangumi_list::SectionInfo;
 use crate::config::{PathSafeTemplate, TEMPLATE, VersionedConfig};
 use crate::utils::rule::FieldEvaluatable;
 
@@ -42,6 +43,7 @@ pub(super) fn router() -> Router {
         .route("/video-sources/collections", post(insert_collection))
         .route("/video-sources/submissions", post(insert_submission))
         .route("/video-sources/bangumi", post(insert_bangumi))
+        .route("/video-sources/bangumi/sections", get(get_bangumi_sections))
 }
 
 /// 列出所有视频来源
@@ -88,18 +90,20 @@ pub async fn get_video_sources(
     }
 
     // 根据 season_type 分离番剧和追剧
+    // season_type: 1=番剧, 4=国创 → 番剧分类
+    // season_type: 2,3,5,7 → 追剧分类
     let mut bangumi = Vec::new();
     let mut drama = Vec::new();
     for item in all_bangumi {
         let season_type = item.season_type.unwrap_or(0);
-        if season_type == 1 {
-            // season_type = 1 表示番剧
+        if matches!(season_type, 1 | 4) {
+            // season_type = 1(番剧) 或 4(国创) → 番剧分类
             bangumi.push(VideoSource {
                 id: item.id,
                 name: item.name,
             });
         } else {
-            // season_type != 1 表示追剧
+            // 其他 season_type → 追剧分类
             drama.push(VideoSource {
                 id: item.id,
                 name: item.name,
@@ -193,15 +197,17 @@ pub async fn get_video_sources_details(
         })
     }
     // 根据 season_type 分离番剧和追剧
+    // season_type: 1=番剧, 4=国创 → 番剧分类
+    // season_type: 2,3,5,7 → 追剧分类
     let mut bangumi = Vec::new();
     let mut drama = Vec::new();
     for item in all_bangumi {
         let season_type = item.season_type.unwrap_or(0);
-        if season_type == 1 {
-            // season_type = 1 表示番剧
+        if matches!(season_type, 1 | 4) {
+            // season_type = 1(番剧) 或 4(国创) → 番剧分类
             bangumi.push(item);
         } else {
-            // season_type != 1 表示追剧
+            // 其他 season_type → 追剧分类
             drama.push(item);
         }
     }
@@ -531,6 +537,7 @@ pub async fn insert_bangumi(
         total: Set(bangumi_info.total),
         is_finish: Set(bangumi_info.is_finish),
         season_type: Set(bangumi_info.season_type),
+        selected_section_ids: Set(request.selected_section_ids),
         path: Set(request.path),
         enabled: Set(true),  // 订阅后自动启用
         ..Default::default()
@@ -538,4 +545,15 @@ pub async fn insert_bangumi(
     .exec(&db)
     .await?;
     Ok(ApiResponse::ok(true))
+}
+
+/// 获取番剧的 section 列表
+pub async fn get_bangumi_sections(
+    Extension(bili_client): Extension<Arc<BiliClient>>,
+    Query(params): Query<BangumiSectionsRequest>,
+) -> Result<ApiResponse<Vec<SectionInfo>>, ApiError> {
+    let credential = &VersionedConfig::get().read().credential;
+    let bangumi = BangumiList::new(bili_client.as_ref(), params.season_id, credential);
+    let sections = bangumi.get_sections().await?;
+    Ok(ApiResponse::ok(sections))
 }

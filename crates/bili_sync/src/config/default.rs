@@ -30,7 +30,7 @@ pub fn default_submission_path() -> String {
 }
 
 pub fn default_bangumi_path() -> String {
-    "番剧".to_owned()
+    "".to_owned()
 }
 
 pub fn default_bangumi_name() -> String {

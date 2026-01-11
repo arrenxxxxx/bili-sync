@@ -26,6 +26,8 @@ impl VideoInfo {
                 pubtime: Set(pubtime.naive_utc()),
                 category: Set(2), // 视频合集里的内容类型肯定是视频
                 valid: Set(true),
+                show_title: Set(Some(String::new())), // Collection 暂时使用空字符串，后续会被详情更新
+                section_title: Set(Some(String::new())), // 非番剧视频使用空字符串
                 ..default
             },
             VideoInfo::Favorite {
@@ -41,7 +43,7 @@ impl VideoInfo {
                 attr,
             } => bili_sync_entity::video::ActiveModel {
                 bvid: Set(bvid),
-                name: Set(title),
+                name: Set(title.clone()),
                 category: Set(vtype),
                 intro: Set(intro),
                 cover: Set(cover),
@@ -53,6 +55,8 @@ impl VideoInfo {
                 upper_id: Set(upper.mid),
                 upper_name: Set(upper.name),
                 upper_face: Set(upper.face),
+                show_title: Set(Some(title)), // 非番剧视频使用 title 作为 show_title
+                section_title: Set(Some(String::new())), // 非番剧视频使用空字符串
                 ..default
             },
             VideoInfo::WatchLater {
@@ -67,7 +71,7 @@ impl VideoInfo {
                 state,
             } => bili_sync_entity::video::ActiveModel {
                 bvid: Set(bvid),
-                name: Set(title),
+                name: Set(title.clone()),
                 category: Set(2), // 稍后再看里的内容类型肯定是视频
                 intro: Set(intro),
                 cover: Set(cover),
@@ -79,6 +83,8 @@ impl VideoInfo {
                 upper_id: Set(upper.mid),
                 upper_name: Set(upper.name),
                 upper_face: Set(upper.face),
+                show_title: Set(Some(title)), // 非番剧视频使用 title 作为 show_title
+                section_title: Set(Some(String::new())), // 非番剧视频使用空字符串
                 ..default
             },
             VideoInfo::Submission {
@@ -89,12 +95,14 @@ impl VideoInfo {
                 ctime,
             } => bili_sync_entity::video::ActiveModel {
                 bvid: Set(bvid),
-                name: Set(title),
+                name: Set(title.clone()),
                 intro: Set(intro),
                 cover: Set(cover),
                 ctime: Set(ctime.naive_utc()),
                 category: Set(2), // 投稿视频的内容类型肯定是视频
                 valid: Set(true),
+                show_title: Set(Some(title)), // 非番剧视频使用 title 作为 show_title
+                section_title: Set(Some(String::new())), // 非番剧视频使用空字符串
                 ..default
             },
             VideoInfo::Dynamic {
@@ -105,12 +113,14 @@ impl VideoInfo {
                 pubtime,
             } => bili_sync_entity::video::ActiveModel {
                 bvid: Set(bvid),
-                name: Set(title),
+                name: Set(title.clone()),
                 intro: Set(desc),
                 cover: Set(cover),
                 pubtime: Set(pubtime.naive_utc()),
                 category: Set(2), // 动态里的视频内容类型肯定是视频
                 valid: Set(true),
+                show_title: Set(Some(title)), // 非番剧视频使用 title 作为 show_title
+                section_title: Set(Some(String::new())), // 非番剧视频使用空字符串
                 ..default
             },
             VideoInfo::Bangumi {
@@ -122,28 +132,36 @@ impl VideoInfo {
                 season_id,
                 ep_id,
                 episode_number,
+                show_title,
+                section_title,
                 show_season_type,
                 actors,
                 ..
-            } => bili_sync_entity::video::ActiveModel {
-                bvid: Set(bvid),
-                name: Set(title),
-                intro: Set(intro),
-                cover: Set(cover),
-                pubtime: Set(pubtime.naive_utc()),
-                ctime: Set(pubtime.naive_utc()),
-                category: Set(2), // 番剧内容类型肯定是视频
-                valid: Set(true),
-                upper_id: Set(0),
-                upper_name: Set("番剧".to_string()),
-                upper_face: Set(String::new()),
-                download_status: Set(0),
-                season_id: Set(Some(season_id)),
-                ep_id: Set(Some(ep_id)),
-                episode_number: Set(episode_number),
-                show_season_type: Set(show_season_type),
-                actors: Set(actors),
-                ..default
+            } => {
+                // 将 section_title 的 None 转换为 Some("")，避免数据库 NOT NULL 约束错误
+                let section_title = section_title.or(Some(String::new()));
+                bili_sync_entity::video::ActiveModel {
+                    bvid: Set(bvid),
+                    name: Set(title),
+                    intro: Set(intro),
+                    cover: Set(cover),
+                    pubtime: Set(pubtime.naive_utc()),
+                    ctime: Set(pubtime.naive_utc()),
+                    category: Set(2), // 番剧内容类型肯定是视频
+                    valid: Set(true),
+                    upper_id: Set(0),
+                    upper_name: Set("番剧".to_string()),
+                    upper_face: Set(String::new()),
+                    download_status: Set(0),
+                    season_id: Set(Some(season_id)),
+                    ep_id: Set(Some(ep_id)),
+                    episode_number: Set(episode_number),
+                    show_title: Set(show_title),
+                    section_title: Set(section_title),
+                    show_season_type: Set(show_season_type),
+                    actors: Set(actors),
+                    ..default
+                }
             },
             VideoInfo::Detail { .. } => unreachable!(),
         }

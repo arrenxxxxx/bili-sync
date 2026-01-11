@@ -23,7 +23,7 @@ pub use video::{Dimension, PageInfo, Video};
 pub use watch_later::WatchLater;
 
 mod analyzer;
-mod bangumi_list;
+pub mod bangumi_list;
 mod client;
 mod collection;
 mod credential;
@@ -207,6 +207,7 @@ pub enum VideoInfo {
         #[serde(with = "ts_seconds")]
         pubtime: DateTime<Utc>,
         show_title: Option<String>,
+        section_title: Option<String>,
         season_number: Option<i32>,
         episode_number: Option<i32>,
         share_copy: Option<String>,

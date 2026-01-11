@@ -126,6 +126,9 @@ pub struct InsertBangumiRequest {
     pub season_id: i64,
     #[validate(custom(function = "crate::utils::validation::validate_path"))]
     pub path: String,
+    /// 用户选择的 section_id 列表（JSON 数组字符串）
+    #[serde(default)]
+    pub selected_section_ids: String,
 }
 
 #[derive(Deserialize, Validate)]
@@ -136,6 +139,11 @@ pub struct UpdateVideoSourceRequest {
     pub enabled: bool,
     pub rule: Option<Rule>,
     pub use_dynamic_api: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct BangumiSectionsRequest {
+    pub season_id: i64,
 }
 
 #[derive(Serialize, Deserialize)]

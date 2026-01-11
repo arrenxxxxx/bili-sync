@@ -10,6 +10,9 @@ mod m20250613_043257_add_config;
 mod m20250712_080013_add_video_created_at_index;
 mod m20250903_094454_add_rule_and_should_download;
 mod m20251009_123713_add_use_dynamic_api;
+mod m20250110_000001_add_selected_sections;
+mod m20250110_000002_add_show_title;
+mod m20250110_000003_add_section_title;
 mod m20250106_220000_add_bangumi;
 mod m20250108_000000_fix_bangumi_default;
 mod m20250108_000001_extend_video_for_bangumi;
@@ -32,6 +35,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20250712_080013_add_video_created_at_index::Migration),
             Box::new(m20250903_094454_add_rule_and_should_download::Migration),
             Box::new(m20251009_123713_add_use_dynamic_api::Migration),
+            Box::new(m20250110_000001_add_selected_sections::Migration),
+            Box::new(m20250110_000002_add_show_title::Migration),
+            Box::new(m20250110_000003_add_section_title::Migration),
             Box::new(m20250106_220000_add_bangumi::Migration),
             Box::new(m20250108_000000_fix_bangumi_default::Migration),
             Box::new(m20250108_000001_extend_video_for_bangumi::Migration),
