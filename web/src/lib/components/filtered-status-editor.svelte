@@ -65,8 +65,10 @@
 	}
 
 	// 响应式变量：需要显式声明依赖才能触发重新计算
-	$: videoStatuses, pageStatuses;
-	$: anyChanges = videoStatuses.some((status) => status !== null) ||
+	// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+	$: (videoStatuses, pageStatuses);
+	$: anyChanges =
+		videoStatuses.some((status) => status !== null) ||
 		pageStatuses.some((status) => status !== null);
 
 	function buildRequest(): UpdateFilteredVideoStatusRequest {

@@ -81,7 +81,7 @@
 		>
 			{#each drama as item (getFollowedKey(item))}
 				<div style="max-width: 450px; width: 100%;">
-					<SubscriptionCard item={item} onSubscriptionSuccess={handleSubscriptionSuccess} />
+					<SubscriptionCard {item} onSubscriptionSuccess={handleSubscriptionSuccess} />
 				</div>
 			{/each}
 		</div>
@@ -94,9 +94,7 @@
 		<div class="flex items-center justify-center py-12">
 			<div class="space-y-2 text-center">
 				<p class="text-muted-foreground">暂无追剧数据</p>
-				<p class="text-muted-foreground text-sm">
-					请先在 B 站关注一些剧集，或检查账号配置
-				</p>
+				<p class="text-muted-foreground text-sm">请先在 B 站关注一些剧集，或检查账号配置</p>
 			</div>
 		</div>
 	{/if}

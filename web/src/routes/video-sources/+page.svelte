@@ -32,7 +32,8 @@
 
 	// 添加对话框状态
 	let showAddDialog = false;
-	let addDialogType: 'favorites' | 'collections' | 'submissions' | 'bangumi' | 'drama' = 'favorites';
+	let addDialogType: 'favorites' | 'collections' | 'submissions' | 'bangumi' | 'drama' =
+		'favorites';
 	let adding = false;
 
 	// 编辑对话框状态

@@ -115,8 +115,10 @@
 	}
 
 	// 响应式变量：需要显式声明依赖才能触发重新计算
-	$: videoStatuses, originalVideoStatuses, pageStatuses, originalPageStatuses, pages;
-	$: anyChanges = !videoStatuses.every((status, index) => status === originalVideoStatuses[index]) ||
+	// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+	$: (videoStatuses, originalVideoStatuses, pageStatuses, originalPageStatuses, pages);
+	$: anyChanges =
+		!videoStatuses.every((status, index) => status === originalVideoStatuses[index]) ||
 		pages.some((page) => {
 			const currentStatuses = pageStatuses[page.id] || [];
 			const originalStatuses = originalPageStatuses[page.id] || [];

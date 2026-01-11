@@ -156,7 +156,7 @@
 			if (response?.data) {
 				sections = response.data;
 				// 默认选中所有 section
-				selectedSectionIds = sections.map(s => s.id);
+				selectedSectionIds = sections.map((s) => s.id);
 			}
 		} catch (error) {
 			console.error('加载内容列表失败:', error);
@@ -170,7 +170,7 @@
 
 	function toggleSection(sectionId: number) {
 		if (selectedSectionIds.includes(sectionId)) {
-			selectedSectionIds = selectedSectionIds.filter(id => id !== sectionId);
+			selectedSectionIds = selectedSectionIds.filter((id) => id !== sectionId);
 		} else {
 			selectedSectionIds = [...selectedSectionIds, sectionId];
 		}
@@ -180,7 +180,7 @@
 		if (selectedSectionIds.length === sections.length) {
 			selectedSectionIds = [];
 		} else {
-			selectedSectionIds = sections.map(s => s.id);
+			selectedSectionIds = sections.map((s) => s.id);
 		}
 	}
 
@@ -280,11 +280,9 @@
 							<button
 								type="button"
 								onclick={toggleAllSections}
-								class="text-xs text-muted-foreground hover:text-foreground"
+								class="text-muted-foreground hover:text-foreground text-xs"
 							>
-								{selectedSectionIds.length === sections.length
-									? '取消全选'
-									: '全选'}
+								{selectedSectionIds.length === sections.length ? '取消全选' : '全选'}
 							</button>
 						</div>
 						{#if loadingSections}

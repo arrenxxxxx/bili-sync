@@ -59,7 +59,8 @@ export const ToFilterParams = (
 
 	if (state.videoSource && state.videoSource.type && state.videoSource.id) {
 		const { type, id } = state.videoSource;
-		params[type as 'collection' | 'favorite' | 'submission' | 'watch_later' | 'bangumi' | 'drama'] = parseInt(id);
+		params[type as 'collection' | 'favorite' | 'submission' | 'watch_later' | 'bangumi' | 'drama'] =
+			parseInt(id);
 	}
 
 	return params;
