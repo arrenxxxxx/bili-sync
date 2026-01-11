@@ -62,10 +62,13 @@ struct SectionData {
     pub episodes: Vec<Episode>,
     // 忽略其他字段
     #[serde(default)]
+    #[allow(dead_code)]
     pub attr: i32,
     #[serde(default)]
+    #[allow(dead_code)]
     pub episode_id: i64,
     #[serde(default)]
+    #[allow(dead_code)]
     pub episode_ids: Vec<i64>,
 }
 
@@ -91,10 +94,13 @@ struct Episode {
     pub pub_time: i64, // 发布时间戳
     // 忽略其他复杂字段
     #[serde(default)]
+    #[allow(dead_code)]
     pub cover: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub from: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub link: String,
 }
 

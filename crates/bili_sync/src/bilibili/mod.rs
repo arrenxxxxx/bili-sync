@@ -208,8 +208,10 @@ pub enum VideoInfo {
         pubtime: DateTime<Utc>,
         show_title: Option<String>,
         section_title: Option<String>,
+        #[allow(dead_code)]
         season_number: Option<i32>,
         episode_number: Option<i32>,
+        #[allow(dead_code)]
         share_copy: Option<String>,
         show_season_type: Option<i32>,
         actors: Option<String>,

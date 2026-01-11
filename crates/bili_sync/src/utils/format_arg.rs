@@ -233,6 +233,7 @@ pub fn bangumi_page_format_args(
 }
 
 /// 番剧专用的格式化函数（兼容旧版，无 api_title 参数）
+#[allow(dead_code)]
 pub fn bangumi_page_format_args_legacy(
     video_model: &bili_sync_entity::video::Model,
     page_model: &bili_sync_entity::page::Model,

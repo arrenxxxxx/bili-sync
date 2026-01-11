@@ -356,7 +356,7 @@ pub async fn download_video_pages(
                     "bangumi",
                     bangumi_page_format_args(
                         &video_model,
-                        &page_models.first().unwrap(),
+                        page_models.first().unwrap(),
                         &cx.config.time_format,
                         api_title.as_deref(),
                     ),

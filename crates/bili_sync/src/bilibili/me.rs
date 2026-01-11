@@ -191,6 +191,7 @@ fn default_total() -> i64 {
 #[derive(Debug, serde::Deserialize)]
 pub struct BangumiItem {
     pub season_id: i64,
+    #[allow(dead_code)]
     pub media_id: i64,
     pub title: String,
     pub cover: String,
